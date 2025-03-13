@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bahmut.de/pdx-deepl/pdx"
 	"bahmut.de/pdx-deepl/translator"
 	"bahmut.de/pdx-deepl/util/logging"
 	"flag"
@@ -15,15 +16,17 @@ const (
 )
 
 const (
-	FlagLocalization = "localization"
 	FlagApiType      = "api-type"
 	FlagApiToken     = "api-token"
+	FlagConfig       = "config"
+	FlagLocalization = "localization"
 )
 
 func main() {
-	localizationLocation := flag.String(FlagLocalization, ".", "Localization Directory")
-	apiType := flag.String(FlagApiType, ApiFree, "Whether to use free or paid API")
-	token := flag.String(FlagApiToken, "", "API Token")
+	localizationLocation := flag.String(FlagLocalization, ".", "Optional: Path to localization directory of your mod")
+	apiType := flag.String(FlagApiType, ApiFree, "Optional: Whether to use free or paid Deepl API")
+	token := flag.String(FlagApiToken, "", "Required: Deepl API Token")
+	config := flag.String(FlagConfig, pdx.DefaultConfigFile, "Optional: Path to translation config file")
 	flag.Parse()
 
 	if token == nil || *token == "" {
@@ -31,6 +34,15 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
+
+	var resolvedConfigFile string
+	if config == nil || *config == "" {
+		resolvedConfigFile = pdx.DefaultConfigFile
+	} else {
+		resolvedConfigFile = *config
+	}
+
+	logging.Infof("%sTranslation Config:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedConfigFile)
 
 	var resolvedLocalizationDirectory string
 	if localizationLocation == nil || *localizationLocation == "" {
