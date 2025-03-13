@@ -1,7 +1,7 @@
 package translator
 
 import (
-	"bahmut.de/pdx-deepl-action/util/logging"
+	"bahmut.de/pdx-deepl/util/logging"
 	"bytes"
 	"encoding/json"
 	"io"

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bahmut.de/pdx-deepl-action/config"
-	"bahmut.de/pdx-deepl-action/translator"
-	"bahmut.de/pdx-deepl-action/util/logging"
+	"bahmut.de/pdx-deepl/config"
+	"bahmut.de/pdx-deepl/translator"
+	"bahmut.de/pdx-deepl/util/logging"
 	"net/url"
 	"os"
 )

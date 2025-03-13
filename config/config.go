@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 
-	"bahmut.de/pdx-deepl-action/util/logging"
+	"bahmut.de/pdx-deepl/util/logging"
 )
 
 var Directory = "."
