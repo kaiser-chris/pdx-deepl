@@ -1,5 +1,17 @@
 name: Build Binaries
-on: push
+
+on:
+  pull_request:
+    paths:
+      - '**.go'
+    branches:
+      - master
+  push:
+    paths:
+      - '**.go'
+    branches:
+      - master
+
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
