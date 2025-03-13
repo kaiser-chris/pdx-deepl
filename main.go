@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bahmut.de/pdx-deepl/logging"
 	"bahmut.de/pdx-deepl/pdx"
 	"bahmut.de/pdx-deepl/translator"
-	"bahmut.de/pdx-deepl/util/logging"
 	"flag"
 	"fmt"
 	"net/url"
@@ -89,6 +89,11 @@ func main() {
 		logging.Fatalf("Could not initialize %sPDX Translator%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())
 		os.Exit(1)
 	}
+	err = translatorPdx.Translate()
+	if err != nil {
+		logging.Fatalf("Could not run %sPDX Translator%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())
+		os.Exit(1)
+	}
 
-	logging.Info(translatorPdx)
+	logging.Infof("%sTranslation was run successfully%s", logging.AnsiBoldOn, logging.AnsiAllDefault)
 }

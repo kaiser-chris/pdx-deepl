@@ -20,3 +20,8 @@ func CreateTranslator(configFile, localizationDirectory string, translator *tran
 		Translator:            translator,
 	}, nil
 }
+
+func (translator *ParadoxTranslator) Translate() error {
+	readLanguage(translator.LocalizationDirectory, "english")
+	return nil
+}

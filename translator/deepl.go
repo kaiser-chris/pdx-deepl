@@ -1,7 +1,7 @@
 package translator
 
 import (
-	"bahmut.de/pdx-deepl/util/logging"
+	"bahmut.de/pdx-deepl/logging"
 	"bytes"
 	"encoding/json"
 	"io"
@@ -37,7 +37,6 @@ func CreateApi(apiUrl *url.URL, token string) *DeeplApi {
 }
 
 func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang string) (ApiResponse, error) {
-
 	apiRequest := ApiRequest{
 		Translate:  translate,
 		TargetLang: targetLang,

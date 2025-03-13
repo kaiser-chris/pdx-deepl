@@ -1,15 +1,15 @@
 package pdx
 
 import (
-	"bahmut.de/pdx-deepl/util/logging"
+	"bahmut.de/pdx-deepl/logging"
 	"bufio"
-	"hash"
 	"hash/crc32"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -28,9 +28,10 @@ type LocalizationFile struct {
 }
 
 type Localization struct {
-	Key  string
-	Text string
-	Hash *hash.Hash32
+	Key             string
+	Text            string
+	Checksum        uint32
+	CompareChecksum uint32
 }
 
 func readLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
@@ -71,7 +72,6 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 }
 
 func readLocalizationFile(path, filename string) (*LocalizationFile, error) {
-	logging.Info(path)
 	reader, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -85,18 +85,22 @@ func readLocalizationFile(path, filename string) (*LocalizationFile, error) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		matches := findAll(localizationRegex, scanner.Text())
+		checksum := crc32.Checksum([]byte(matches["loc"]), crc32q)
+
 		localization := &Localization{
-			Key:  matches["locKey"],
-			Text: matches["loc"],
+			Key:      matches["locKey"],
+			Text:     matches["loc"],
+			Checksum: checksum,
 		}
 		if matches["hash"] != "" {
 			pureHash, _ := strings.CutPrefix(matches["hash"], "#deepl:")
-			locHash := crc32.New(crc32q)
-			_, err = locHash.Write([]byte(pureHash))
+			checksum, err := strconv.Atoi(pureHash)
 			if err != nil {
-				return nil, err
+				logging.Warnf("Could not parse existsing compare checksum (%s) in file: %s", matches["hash"], path)
+				break
+			} else {
+				localization.Checksum = uint32(checksum)
 			}
-			localization.Hash = &locHash
 		}
 		file.Localizations = append(file.Localizations, localization)
 	}
