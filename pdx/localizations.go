@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-var localizationRegex = regexp.MustCompile("^\\s*(?P<locKey>.+):\\s*\"(?P<loc>.*)\"\\s*?(?P<hash>#deepl:.*)?(?:#.*)?$")
+var localizationRegex = regexp.MustCompile("^\\s*(?P<locKey>.+):\\s*\"(?P<loc>.*)\"\\s*(?P<hash>#deepl:.*)?(?:#.*)?$")
 var crc32q = crc32.MakeTable(0xD5828281)
 
 type LocalizationLanguage struct {
@@ -33,7 +33,7 @@ type Localization struct {
 	Hash *hash.Hash32
 }
 
-func ReadLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
+func readLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
 	language := LocalizationLanguage{
 		Name:   name,
 		Locale: Languages[name],
@@ -109,15 +109,13 @@ func readLocalizationFile(path, filename string) (*LocalizationFile, error) {
 	return file, nil
 }
 
-func findAll(expression *regexp.Regexp, content string) (paramsMap map[string]string) {
-
+func findAll(expression *regexp.Regexp, content string) (matches map[string]string) {
 	match := expression.FindStringSubmatch(content)
-
-	paramsMap = make(map[string]string)
+	matches = make(map[string]string)
 	for i, name := range expression.SubexpNames() {
 		if i > 0 && i <= len(match) {
-			paramsMap[name] = match[i]
+			matches[name] = match[i]
 		}
 	}
-	return paramsMap
+	return matches
 }

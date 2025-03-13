@@ -29,7 +29,12 @@ type DeeplApi struct {
 	Token  string
 }
 
-var Api DeeplApi
+func CreateApi(apiUrl *url.URL, token string) *DeeplApi {
+	return &DeeplApi{
+		ApiUrl: apiUrl,
+		Token:  token,
+	}
+}
 
 func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang string) (ApiResponse, error) {
 

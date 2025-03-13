@@ -53,13 +53,6 @@ func main() {
 
 	logging.Infof("%sLocalization Directory:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedLocalizationDirectory)
 
-	language, err := pdx.ReadLanguage(resolvedLocalizationDirectory, "english")
-	if err != nil {
-		logging.Fatal(err.Error())
-	}
-
-	logging.Fatal(language)
-
 	var apiUrl *url.URL
 
 	var resolvedApiType string
@@ -90,20 +83,12 @@ func main() {
 	}
 	logging.Infof("%sAPI Type:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedApiType)
 
-	translator.Api = translator.DeeplApi{
-		Token:  *token,
-		ApiUrl: apiUrl,
-	}
-
-	translation, err := translator.Api.Translate(
-		[]string{"[AddTextIf( Character.IsHistorical, Concatenate( Localize( 'DATA_CHARACTER_TOOLTIP_HISTORICAL' ), '\n\n' ) )][AddTextIf( Character.IsBusy, Concatenate( Localize( 'CHARACTER_IS_BUSY' ), '\n' ) )][Concept('concept_character_role', '$concept_character_roles$')]: [Character.GetAllRoleNames|v][ConcatIfNeitherEmpty(' #v and#! ', AddLocalizationIf(Character.MakeScope.Var('is_magic_researcher').IsSet, 'gg_character_role_researcher'))]$DATA_CHARACTER_NAME_TOOLTIP_COMMANDER_DETAILS$[ConcatIfNeitherEmpty('\n', AddLocalizationIf( Character.IsAgitator, 'AGITATOR_POLITICAL_MOVEMENT_IN_COUNTRY'))]\n\n[Concept('concept_character_trait', '$concept_character_traits$')]: [Character.GetTraitsDesc]\n[concept_interest_group]: [Character.GetInterestGroup.GetName]\n[concept_ideology]: [Character.GetIdeology.GetName]\n\n[SelectLocalization(Character.IsInExilePool, 'DATA_CHARACTER_NAME_TOOLTIP_LOCATION_EXILE', 'DATA_CHARACTER_NAME_TOOLTIP_LOCATION_COUNTRY')][ConcatIfNeitherEmpty('\n', AddLocalizationIf(Character.IsAgitator, 'EXILE_HOME_COUNTRY'))]\n[concept_culture]: [Character.GetCulture.GetName]\n[concept_religion]: [Character.GetReligion.GetName]\n[concept_popularity]: #tooltippable_name #tooltip:[Character.GetTooltipTag],POPULARITY_BREAKDOWN [LabelingHelper.GetLabelForPopularityCFixedPoint(Character.GetPopularity)]#!#! (#tooltippable #tooltip:[Character.GetTooltipTag],POPULARITY_BREAKDOWN [Character.GetPopularity|0]#!#!)\nAge: [Character.GetAge|v]"},
-		"EN",
-		"DE",
-	)
+	translatorApi := translator.CreateApi(apiUrl, *token)
+	translatorPdx, err := pdx.CreateTranslator(resolvedConfigFile, resolvedLocalizationDirectory, translatorApi)
 	if err != nil {
-		logging.Fatalf("Could not translate translations %s", err.Error())
+		logging.Fatalf("Could not initialize %sPDX Translator%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())
 		os.Exit(1)
 	}
 
-	logging.Infof("Translations: %s", translation.Translations)
+	logging.Info(translatorPdx)
 }
