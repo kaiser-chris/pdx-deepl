@@ -53,6 +53,13 @@ func main() {
 
 	logging.Infof("%sLocalization Directory:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedLocalizationDirectory)
 
+	language, err := pdx.ReadLanguage(resolvedLocalizationDirectory, "english")
+	if err != nil {
+		logging.Fatal(err.Error())
+	}
+
+	logging.Fatal(language)
+
 	var apiUrl *url.URL
 
 	var resolvedApiType string
