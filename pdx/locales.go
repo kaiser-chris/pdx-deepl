@@ -1,0 +1,14 @@
+package pdx
+
+var Languages = map[string]string{
+	"english":      "EN-US",
+	"french":       "FR",
+	"german":       "DE",
+	"japanese":     "JA",
+	"korean":       "KO",
+	"polish":       "PL",
+	"russian":      "RU",
+	"turkish":      "TR",
+	"braz_por":     "PT-BR",
+	"simp_chinese": "ZH-HANS",
+}
