@@ -28,6 +28,7 @@ go.work
 
 # Ignore GoLand settings
 /.idea/
+/.run/
 
 # Application specific
 ### Ignore Database

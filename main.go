@@ -1,9 +1,10 @@
 package main
 
 import (
-	"bahmut.de/pdx-deepl/config"
 	"bahmut.de/pdx-deepl/translator"
 	"bahmut.de/pdx-deepl/util/logging"
+	"flag"
+	"fmt"
 	"net/url"
 	"os"
 )
@@ -13,16 +14,44 @@ const (
 	ApiPaid = "paid"
 )
 
-func main() {
-	localizationLocation := config.RequireStringEnv("LOCALIZATION")
-	logging.Infof("%sLocalization Directory:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, localizationLocation)
+const (
+	FlagLocalization = "localization"
+	FlagApiType      = "api-type"
+	FlagApiToken     = "api-token"
+)
 
-	apiType := config.OptionalStringEnv("API_TYPE")
-	if apiType == "" {
-		apiType = "free"
+func main() {
+	localizationLocation := flag.String(FlagLocalization, ".", "Localization Directory")
+	apiType := flag.String(FlagApiType, ApiFree, "Whether to use free or paid API")
+	token := flag.String(FlagApiToken, "", "API Token")
+	flag.Parse()
+
+	if token == nil || *token == "" {
+		fmt.Printf("The parameter %s%s%s is required.\n\n", logging.AnsiBoldOn, FlagApiToken, logging.AnsiAllDefault)
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
+
+	var resolvedLocalizationDirectory string
+	if localizationLocation == nil || *localizationLocation == "" {
+		resolvedLocalizationDirectory = "."
+	} else {
+		resolvedLocalizationDirectory = *localizationLocation
+	}
+
+	logging.Infof("%sLocalization Directory:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedLocalizationDirectory)
+
 	var apiUrl *url.URL
-	switch apiType {
+
+	var resolvedApiType string
+
+	if apiType == nil {
+		resolvedApiType = ApiFree
+	} else {
+		resolvedApiType = *apiType
+	}
+
+	switch resolvedApiType {
 	case ApiFree:
 		parsedUrl, err := url.Parse("https://api-free.deepl.com/v2/translate")
 		if err != nil {
@@ -38,12 +67,12 @@ func main() {
 		apiUrl = parsedUrl
 		break
 	default:
-		logging.Fatalf("API type %s%s%s unknown please choose one of %s or %s", logging.AnsiBoldOn, apiType, logging.AnsiAllDefault, ApiFree, ApiPaid)
+		logging.Fatalf("API type %s%s%s unknown please choose one of %s or %s", logging.AnsiBoldOn, resolvedApiType, logging.AnsiAllDefault, ApiFree, ApiPaid)
 	}
-	logging.Infof("%sAPI Type:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, apiType)
+	logging.Infof("%sAPI Type:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedApiType)
 
 	translator.Api = translator.DeeplApi{
-		Token:  config.RequireStringEnv("API_TOKEN"),
+		Token:  *token,
 		ApiUrl: apiUrl,
 	}
 
