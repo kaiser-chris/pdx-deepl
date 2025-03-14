@@ -3,10 +3,10 @@ package pdx
 import (
 	"bahmut.de/pdx-deepl/logging"
 	"bufio"
+	"fmt"
 	"hash/crc32"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -17,14 +17,16 @@ var localizationRegex = regexp.MustCompile("^\\s*(?P<locKey>.+):\\s*\"(?P<loc>.*
 var crc32q = crc32.MakeTable(0xD5828281)
 
 type LocalizationLanguage struct {
-	Name   string
-	Locale string
-	Files  []*LocalizationFile
+	Name      string
+	Locale    string
+	Directory string
+	Files     map[string]*LocalizationFile
 }
 
 type LocalizationFile struct {
 	FileName      string
-	Localizations []*Localization
+	Path          string
+	Localizations map[string]*Localization
 }
 
 type Localization struct {
@@ -35,12 +37,23 @@ type Localization struct {
 }
 
 func readLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
-	language := LocalizationLanguage{
-		Name:   name,
-		Locale: Languages[name],
+	languageDirectory := filepath.Join(localizationDirectory, name)
+
+	if _, err := os.Stat(languageDirectory); os.IsNotExist(err) {
+		return nil, fmt.Errorf("language directory could not be found: %s", languageDirectory)
 	}
 
-	languageDirectory := path.Join(localizationDirectory, name)
+	locale, ok := Languages[name]
+	if !ok {
+		return nil, fmt.Errorf("language locale not supported: %s", name)
+	}
+
+	language := LocalizationLanguage{
+		Name:      name,
+		Directory: languageDirectory,
+		Locale:    locale,
+		Files:     make(map[string]*LocalizationFile),
+	}
 
 	err := filepath.WalkDir(languageDirectory, func(path string, info os.DirEntry, err error) error {
 		if err != nil {
@@ -55,11 +68,11 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 		}
 		localizations := findAll(localizationRegex, string(content))
 		if len(localizations) == 0 {
-			localization, err := readLocalizationFile(path, info.Name())
+			localization, err := readLocalizationFile(path)
 			if err != nil {
 				return err
 			}
-			language.Files = append(language.Files, localization)
+			language.Files[localization.FileName] = localization
 		}
 		return nil
 	})
@@ -71,15 +84,18 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 	return &language, nil
 }
 
-func readLocalizationFile(path, filename string) (*LocalizationFile, error) {
-	reader, err := os.Open(path)
+func readLocalizationFile(file string) (*LocalizationFile, error) {
+	reader, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
 
-	file := &LocalizationFile{
+	filename := filepath.Base(file)
+
+	localizationFile := &LocalizationFile{
 		FileName:      filename,
-		Localizations: make([]*Localization, 0),
+		Path:          file,
+		Localizations: make(map[string]*Localization),
 	}
 
 	scanner := bufio.NewScanner(reader)
@@ -96,21 +112,21 @@ func readLocalizationFile(path, filename string) (*LocalizationFile, error) {
 			pureHash, _ := strings.CutPrefix(matches["hash"], "#deepl:")
 			checksum, err := strconv.Atoi(pureHash)
 			if err != nil {
-				logging.Warnf("Could not parse existsing compare checksum (%s) in file: %s", matches["hash"], path)
+				logging.Warnf("Could not parse existsing compare checksum (%s) in file: %s", matches["hash"], file)
 				break
 			} else {
 				localization.Checksum = uint32(checksum)
 			}
 		}
-		file.Localizations = append(file.Localizations, localization)
+		localizationFile.Localizations[localization.Key] = localization
 	}
 
-	if len(file.Localizations) == 0 {
-		logging.Infof("Nothing found for localization file %s", path)
+	if len(localizationFile.Localizations) == 0 {
+		logging.Infof("Nothing found for localization file %s", file)
 		return nil, nil
 	}
 
-	return file, nil
+	return localizationFile, nil
 }
 
 func findAll(expression *regexp.Regexp, content string) (matches map[string]string) {

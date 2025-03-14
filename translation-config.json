@@ -1,5 +1,6 @@
 {
   "base-language": "english",
-  "translated-languages": [
+  "target-languages": [
+    "german"
   ]
 }
