@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: 'Release Type'
+        default: 'feature'
+        required: false
+        type: choice
+        options:
+          - major
+          - feature
+          - patch
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - { runner: ubuntu-latest, os: linux,   arch: amd64, env:  CGO_ENABLED=0 }
+          - { runner: ubuntu-latest, os: linux,   arch: arm64, env:  CGO_ENABLED=0 }
+          - { runner: ubuntu-latest, os: windows, arch: amd64, env:  CGO_ENABLED=0 }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Checkout tags
+        run: |
+          git config --global user.name 'Chris Kaiser'
+          git config --global user.email 'kaiser-chris@users.noreply.github.com'
+          git fetch --prune --unshallow --tags
+
+      - name: Get latest version
+        id: project
+        run: |
+          echo "last-version=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_OUTPUT
+
+      - name: Increment release version
+        id: increment-version
+        uses: christian-draeger/increment-semantic-version@1.2.1
+        with:
+          current-version: ${{ steps.project.outputs.last-version }}
+          version-fragment: ${{ inputs.release-type }}
+
+      - name: Build Binary
+        uses: hashicorp/actions-go-build@main
+        with:
+          product_name: pdx-deepl
+          product_version: ${{ steps.increment-version.outputs.next-version }}
+          go_version: 1.24
+          os: ${{ matrix.os }}
+          arch: ${{ matrix.arch }}
+          instructions: |-
+            ${{ matrix.env }} \
+              go build \
+                -o "$BIN_PATH" \
+                -trimpath \
+                -buildvcs=false \
+                -tags="${{ matrix.tags }}" \
+                -ldflags "
+                  -X 'main.Version=$PRODUCT_VERSION'
+                  -X 'main.Revision=$PRODUCT_REVISION'
+                  -X 'main.RevisionTime=$PRODUCT_REVISION_TIME'
+                "
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Checkout tags
+        run: |
+          git config --global user.name 'Chris Kaiser'
+          git config --global user.email 'kaiser-chris@users.noreply.github.com'
+          git fetch --prune --unshallow --tags
+
+      - name: Get latest version
+        id: project
+        run: |
+          echo "last-version=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_OUTPUT
+
+      - name: Increment release version
+        id: increment-version
+        uses: christian-draeger/increment-semantic-version@1.2.1
+        with:
+          current-version: ${{ steps.project.outputs.last-version }}
+          version-fragment: ${{ inputs.release-type }}
+
+      - name: Get changes since last tag
+        id: commits
+        run: |
+          {
+            echo 'markdown<<EOF'
+            echo "$(git log ${{ steps.project.outputs.last-version }}..HEAD --no-merges --pretty=format:' - %s')"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*64.zip"
+          merge-multiple: true
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
+          files: "*64.zip"
+          tag_name	: ${{ steps.increment-version.outputs.next-version }}
+          name: ${{ steps.increment-version.outputs.next-version }}
+          body: |
+            Released a new version of **pdx-deepl**.
+            
+            ### Changes:
+            ${{ steps.commits.outputs.markdown }}
