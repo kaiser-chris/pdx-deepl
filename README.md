@@ -77,3 +77,10 @@ Usage of pdx-deepl:
   -localization string
     	Optional: Path to localization directory of your mod (default ".")
 ```
+
+## Known Issues
+The current version has issues when it is used with the **free** DeepL API:
+- You will get "too many requests" errors, and those are a from rate limiting by the DeepL API. The free api has lower priority than the paid one
+- The current implementation skips further loc keys in the same file when it encounters the issue. Since the whole thing is incremental, you have to rerun the application to generate more keys. For my `german` translation, I had to run it quite a lot of times but I got it done in the end.
+- There IS a monthly character limit of 500k, and it may be an issue when translating a big mod. But running it on another developer's PC with a different account should enable generating more translations
+- I recommend starting with one language instead of multiple
