@@ -54,6 +54,16 @@ will generate translations for `german` and `french`.
 }
 ```
 
+## Getting DeepL API access
+DeepL offers free and pro plans for translations.
+For trying out the tool, I recommend starting with a free account.
+But if your mod is big, it may make sense to look into the pro-plan.
+
+### DeepL Documentation
+- https://www.deepl.com/en/translator
+- https://support.deepl.com/hc/en-us/articles/360019358899-Accessing-DeepL-s-API
+- https://support.deepl.com/hc/en-us/articles/360020695820-API-Key-for-DeepL-s-API
+
 ## Usage
 Help dialog (`pdx-deepl -h`):
 ```
