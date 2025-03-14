@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -53,7 +54,15 @@ func (file *LocalizationFile) Write(language *LocalizationLanguage) error {
 	fileBuilder.WriteString("l_")
 	fileBuilder.WriteString(language.Name)
 	fileBuilder.WriteString(":\n")
-	for _, localization := range file.Localizations {
+
+	keys := make([]string, 0, len(file.Localizations))
+	for key := range file.Localizations {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		localization := file.Localizations[key]
 		fileBuilder.WriteString(" ")
 		fileBuilder.WriteString(localization.Key)
 		fileBuilder.WriteString(": \"")
