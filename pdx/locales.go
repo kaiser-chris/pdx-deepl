@@ -1,7 +1,7 @@
 package pdx
 
 var Languages = map[string]string{
-	"english":      "EN-US",
+	"english":      "EN",
 	"french":       "FR",
 	"german":       "DE",
 	"japanese":     "JA",

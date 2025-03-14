@@ -13,6 +13,7 @@ import (
 	"strings"
 )
 
+var utf8Bom = []byte{0xEF, 0xBB, 0xBF}
 var localizationRegex = regexp.MustCompile(`^\s*(?P<locKey>.+):\d*\s*"(?P<loc>.*)"\s*(?P<hash>#deepl:.*)?(?:#.*)?$`)
 var crc32q = crc32.MakeTable(0xD5828281)
 
@@ -24,6 +25,7 @@ type LocalizationLanguage struct {
 }
 
 type LocalizationFile struct {
+	Key           string
 	FileName      string
 	Path          string
 	Localizations map[string]*Localization
@@ -56,12 +58,26 @@ func (file *LocalizationFile) Write(language *LocalizationLanguage) error {
 		fileBuilder.WriteString(localization.Key)
 		fileBuilder.WriteString(": \"")
 		fileBuilder.WriteString(localization.Text)
-		fileBuilder.WriteString("\" #deepl:")
-		fileBuilder.WriteString(strconv.Itoa(int(localization.CompareChecksum)))
-		fileBuilder.WriteString("\n")
+		fileBuilder.WriteString("\"")
+		if localization.CompareChecksum != 0 {
+			fileBuilder.WriteString(" #deepl:")
+			fileBuilder.WriteString(strconv.Itoa(int(localization.CompareChecksum)))
+			fileBuilder.WriteString("\n")
+		} else {
+			fileBuilder.WriteString("\n")
+		}
 	}
 
-	err := os.WriteFile(file.Path, []byte(fileBuilder.String()), 0644)
+	if _, err := os.Stat(filepath.Dir(file.Path)); os.IsNotExist(err) {
+		err := os.MkdirAll(filepath.Dir(file.Path), 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	content := append(utf8Bom, []byte(fileBuilder.String())...)
+
+	err := os.WriteFile(file.Path, content, 0644)
 	if err != nil {
 		return err
 	}
@@ -100,7 +116,13 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 			return err
 		}
 		if localization != nil {
-			language.Files[localization.FileName] = localization
+			tag := fmt.Sprintf("l_%s.yml", language.Name)
+			key, found := strings.CutSuffix(localization.FileName, tag)
+			if !found {
+				return fmt.Errorf("language tag (%s) in filename could not be found: %s", tag, localization.FileName)
+			}
+			localization.Key = key
+			language.Files[key] = localization
 		}
 		return nil
 	})
@@ -145,7 +167,7 @@ func readLocalizationFile(file string) (*LocalizationFile, error) {
 			pureHash, _ := strings.CutPrefix(matches["hash"], "#deepl:")
 			checksum, err := strconv.Atoi(pureHash)
 			if err == nil {
-				localization.Checksum = uint32(checksum)
+				localization.CompareChecksum = uint32(checksum)
 			} else {
 				logging.Warnf("Could not parse existsing compare checksum (%s) in file: %s", matches["hash"], file)
 			}
@@ -154,8 +176,8 @@ func readLocalizationFile(file string) (*LocalizationFile, error) {
 	}
 
 	if len(localizationFile.Localizations) == 0 {
-		logging.Infof("Nothing found for localization file %s", file)
-		return nil, nil
+		logging.Tracef("Nothing found for localization file %s", file)
+		return localizationFile, nil
 	}
 
 	return localizationFile, nil

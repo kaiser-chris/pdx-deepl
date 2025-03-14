@@ -4,6 +4,7 @@ import (
 	"bahmut.de/pdx-deepl/logging"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -69,7 +70,11 @@ func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang 
 	if err != nil {
 		return ApiResponse{}, err
 	}
-	logging.Tracef("Deepl Response: %s", string(body))
+
+	if response.StatusCode != 200 {
+		logging.Tracef("Deepl Response: %s", string(body))
+		return ApiResponse{}, errors.New(response.Status)
+	}
 
 	var apiResponse ApiResponse
 	err = json.Unmarshal(body, &apiResponse)
