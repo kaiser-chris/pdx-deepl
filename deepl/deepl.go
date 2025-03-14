@@ -17,6 +17,7 @@ type ApiRequest struct {
 	TagHandling      string   `json:"tag_handling"`
 	IgnoreTags       []string `json:"ignore_tags"`
 	OutlineDetection bool     `json:"outline_detection"`
+	Glossary         string   `json:"glossary_id"`
 }
 
 type ApiResponse struct {
@@ -40,7 +41,13 @@ func CreateApi(apiUrl *url.URL, token string) *DeeplApi {
 	}
 }
 
-func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang string, ignoreTags []string) (*ApiResponse, error) {
+func (api DeeplApi) Translate(
+	translate []string,
+	sourceLang string,
+	targetLang string,
+	ignoreTags []string,
+	glossary string,
+) (*ApiResponse, error) {
 	apiRequest := ApiRequest{
 		Translate:  translate,
 		TargetLang: targetLang,
@@ -51,6 +58,10 @@ func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang 
 		apiRequest.OutlineDetection = false
 		apiRequest.TagHandling = "xml"
 		apiRequest.IgnoreTags = ignoreTags
+	}
+
+	if glossary != "" {
+		apiRequest.Glossary = glossary
 	}
 
 	requestBody, err := json.Marshal(apiRequest)

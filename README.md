@@ -42,17 +42,40 @@ pdx-deepl translation can be configured with the [translation-config.json](trans
 In this file, you can define which language should be used as a base for translations and also
 which languages should be generated.
 
-In this example the `english` localization will be treated as the source of truth and pdx-deepl
-will generate translations for `german` and `french`.
+In this example the `english` localization will be treated as the source of truth, and pdx-deepl
+will generate translations for `german` and `french` without glossaries.
 ```json
 {
   "base-language": "english",
   "target-languages": [
-    "german",
-    "french"
+    {
+      "name": "german"
+    },
+    {
+      "name": "french"
+    }
   ]
 }
 ```
+
+### Glossaries
+> **NOTE:** Local glossaries are not supported!
+
+Glossaries can be referenced using their id in the config file:
+```json
+{
+  "base-language": "english",
+  "target-languages": [
+    {
+      "name": "german",
+      "glossary": "your-glossary-id"
+    }
+  ]
+}
+```
+
+How to use the DeepL API to create and manage glossaries is documented here:
+- https://developers.deepl.com/docs/api-reference/glossaries
 
 ## Getting DeepL API access
 DeepL offers free and pro plans for translations.

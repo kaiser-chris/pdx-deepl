@@ -9,8 +9,13 @@ import (
 const DefaultConfigFile = "translation-config.json"
 
 type TranslationConfiguration struct {
-	BaseLanguage    string   `json:"base-language"`
-	TargetLanguages []string `json:"target-languages"`
+	BaseLanguage    string                              `json:"base-language"`
+	TargetLanguages []*TranslationConfigurationLanguage `json:"target-languages"`
+}
+
+type TranslationConfigurationLanguage struct {
+	Name     string `json:"name"`
+	Glossary string `json:"glossary"`
 }
 
 func readConfigFile(path string) (*TranslationConfiguration, error) {

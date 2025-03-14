@@ -39,12 +39,12 @@ func (translator *ParadoxTranslator) Translate() error {
 
 	translator.BaseLanguage = baseLanguage
 
-	for _, targetLanguageName := range translator.Config.TargetLanguages {
-		targetLanguage, err := translator.readTargetLanguage(targetLanguageName)
+	for _, targetLanguageConfig := range translator.Config.TargetLanguages {
+		targetLanguage, err := translator.readTargetLanguage(targetLanguageConfig.Name)
 		if err != nil {
 			return err
 		}
-		translatedLanguage, err := translator.translateTargetLanguage(targetLanguage)
+		translatedLanguage, err := translator.translateTargetLanguage(targetLanguage, targetLanguageConfig.Glossary)
 		translator.TargetLanguages = append(translator.TargetLanguages, translatedLanguage)
 	}
 
@@ -74,9 +74,9 @@ func (translator *ParadoxTranslator) readTargetLanguage(language string) (*Local
 	return targetLanguage, nil
 }
 
-func (translator *ParadoxTranslator) translateTargetLanguage(targetLanguage *LocalizationLanguage) (*LocalizationLanguage, error) {
+func (translator *ParadoxTranslator) translateTargetLanguage(targetLanguage *LocalizationLanguage, glossary string) (*LocalizationLanguage, error) {
 	for key, file := range translator.BaseLanguage.Files {
-		translatedFile, err := translator.translateTargetFile(file, targetLanguage.Files[key], targetLanguage)
+		translatedFile, err := translator.translateTargetFile(file, targetLanguage.Files[key], targetLanguage, glossary)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +86,7 @@ func (translator *ParadoxTranslator) translateTargetLanguage(targetLanguage *Loc
 	return targetLanguage, nil
 }
 
-func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *LocalizationFile, targetLanguage *LocalizationLanguage) (*LocalizationFile, error) {
+func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *LocalizationFile, targetLanguage *LocalizationLanguage, glossary string) (*LocalizationFile, error) {
 	var file *LocalizationFile
 	if targetFile == nil {
 		tag := fmt.Sprintf("l_%s.yml", targetLanguage.Name)
@@ -122,7 +122,7 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 			// and is up to date
 			continue
 		}
-		response, err := translator.translateLocalization(localization.Text, targetLanguage)
+		response, err := translator.translateLocalization(localization.Text, targetLanguage, glossary)
 		time.Sleep(500 * time.Millisecond)
 		if err != nil {
 			// Too many requests
@@ -151,7 +151,7 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 	return file, nil
 }
 
-func (translator *ParadoxTranslator) translateLocalization(content string, targetLanguage *LocalizationLanguage) (string, error) {
+func (translator *ParadoxTranslator) translateLocalization(content string, targetLanguage *LocalizationLanguage, glossary string) (string, error) {
 	requestContent := strings.ReplaceAll(content, "[", "<func>")
 	requestContent = strings.ReplaceAll(requestContent, "]", "</func>")
 	for strings.Contains(requestContent, "$") {
@@ -164,6 +164,7 @@ func (translator *ParadoxTranslator) translateLocalization(content string, targe
 		translator.BaseLanguage.Locale,
 		targetLanguage.Locale,
 		[]string{"func", "ref"},
+		glossary,
 	)
 
 	if err != nil {
