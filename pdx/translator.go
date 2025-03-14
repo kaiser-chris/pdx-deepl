@@ -1,7 +1,6 @@
 package pdx
 
 import (
-	"bahmut.de/pdx-deepl/logging"
 	"bahmut.de/pdx-deepl/translator"
 	"os"
 	"path/filepath"
@@ -38,10 +37,13 @@ func (translator *ParadoxTranslator) Translate() error {
 		if err != nil {
 			return err
 		}
-		logging.Info(targetLanguages[index])
 	}
 
-	logging.Info(baseLanguage)
+	err = baseLanguage.Write()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

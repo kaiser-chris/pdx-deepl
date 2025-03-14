@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-var localizationRegex = regexp.MustCompile("^\\s*(?P<locKey>.+):\\s*\"(?P<loc>.*)\"\\s*(?P<hash>#deepl:.*)?(?:#.*)?$")
+var localizationRegex = regexp.MustCompile(`^\s*(?P<locKey>.+):\d*\s*"(?P<loc>.*)"\s*(?P<hash>#deepl:.*)?(?:#.*)?$`)
 var crc32q = crc32.MakeTable(0xD5828281)
 
 type LocalizationLanguage struct {
@@ -34,6 +34,39 @@ type Localization struct {
 	Text            string
 	Checksum        uint32
 	CompareChecksum uint32
+}
+
+func (language *LocalizationLanguage) Write() error {
+	for _, file := range language.Files {
+		err := file.Write(language)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (file *LocalizationFile) Write(language *LocalizationLanguage) error {
+	var fileBuilder strings.Builder
+	fileBuilder.WriteString("l_")
+	fileBuilder.WriteString(language.Name)
+	fileBuilder.WriteString(":\n")
+	for _, localization := range file.Localizations {
+		fileBuilder.WriteString(" ")
+		fileBuilder.WriteString(localization.Key)
+		fileBuilder.WriteString(": \"")
+		fileBuilder.WriteString(localization.Text)
+		fileBuilder.WriteString("\" #deepl:")
+		fileBuilder.WriteString(strconv.Itoa(int(localization.CompareChecksum)))
+		fileBuilder.WriteString("\n")
+	}
+
+	err := os.WriteFile(file.Path, []byte(fileBuilder.String()), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func readLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
@@ -62,16 +95,11 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 		if info.IsDir() {
 			return nil
 		}
-		content, err := os.ReadFile(path)
+		localization, err := readLocalizationFile(path)
 		if err != nil {
 			return err
 		}
-		localizations := findAll(localizationRegex, string(content))
-		if len(localizations) == 0 {
-			localization, err := readLocalizationFile(path)
-			if err != nil {
-				return err
-			}
+		if localization != nil {
 			language.Files[localization.FileName] = localization
 		}
 		return nil
@@ -100,8 +128,13 @@ func readLocalizationFile(file string) (*LocalizationFile, error) {
 
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		matches := findAll(localizationRegex, scanner.Text())
+		line := scanner.Text()
+		matches := findAll(localizationRegex, line)
 		checksum := crc32.Checksum([]byte(matches["loc"]), crc32q)
+		if len(matches) == 0 {
+			// skip line when there is no valid localization
+			continue
+		}
 
 		localization := &Localization{
 			Key:      matches["locKey"],
@@ -111,11 +144,10 @@ func readLocalizationFile(file string) (*LocalizationFile, error) {
 		if matches["hash"] != "" {
 			pureHash, _ := strings.CutPrefix(matches["hash"], "#deepl:")
 			checksum, err := strconv.Atoi(pureHash)
-			if err != nil {
-				logging.Warnf("Could not parse existsing compare checksum (%s) in file: %s", matches["hash"], file)
-				break
-			} else {
+			if err == nil {
 				localization.Checksum = uint32(checksum)
+			} else {
+				logging.Warnf("Could not parse existsing compare checksum (%s) in file: %s", matches["hash"], file)
 			}
 		}
 		localizationFile.Localizations[localization.Key] = localization
