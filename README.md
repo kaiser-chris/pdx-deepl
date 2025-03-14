@@ -88,7 +88,12 @@ But if your mod is big, it may make sense to look into the pro-plan.
 - https://support.deepl.com/hc/en-us/articles/360020695820-API-Key-for-DeepL-s-API
 
 ## Usage
-Help dialog (`pdx-deepl -h`):
+This is an example call to run the application:
+```
+.\pdx-deepl.exe --localization "X:\path\to\localization\directory" --api-token "your token"
+```
+
+All start commands can be found in the help dialog. Help dialog (`.\pdx-deepl.exe -h`):
 ```
 Usage of pdx-deepl:
   -api-token string
