@@ -1,23 +1,24 @@
 package pdx
 
 import (
+	"bahmut.de/pdx-deepl/deepl"
 	"bahmut.de/pdx-deepl/logging"
-	"bahmut.de/pdx-deepl/translator"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type ParadoxTranslator struct {
 	Config                *TranslationConfiguration
 	LocalizationDirectory string
-	Api                   *translator.DeeplApi
+	Api                   *deepl.DeeplApi
 	BaseLanguage          *LocalizationLanguage
 	TargetLanguages       []*LocalizationLanguage
 }
 
-func CreateTranslator(configFile, localizationDirectory string, api *translator.DeeplApi) (*ParadoxTranslator, error) {
+func CreateTranslator(configFile, localizationDirectory string, api *deepl.DeeplApi) (*ParadoxTranslator, error) {
 	config, err := readConfigFile(configFile)
 	if err != nil {
 		return nil, err
@@ -121,11 +122,13 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 			// and is up to date
 			continue
 		}
-		response, err := translator.Api.Translate([]string{localization.Text}, translator.BaseLanguage.Locale, targetLanguage.Locale)
-		if err != nil || len(response.Translations) == 0 {
+		response, err := translator.translateLocalization(localization.Text, targetLanguage)
+		time.Sleep(500 * time.Millisecond)
+		if err != nil {
 			// Too many requests
-			if err != nil && strings.Contains(err.Error(), "429") {
+			if strings.Contains(err.Error(), "429") {
 				logging.Errorf("Stopped translation for file (%s) because of: %v", baseFile.FileName, err)
+				time.Sleep(1000 * time.Millisecond)
 				break
 			}
 
@@ -134,7 +137,7 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 			logging.Warnf("Ignored localization key (%s) in file (%s) because of an error: %s", key, baseFile.FileName, err)
 			continue
 		}
-		targetLocalization.Text = response.Translations[0].Translation
+		targetLocalization.Text = response
 		targetLocalization.CompareChecksum = localization.Checksum
 		file.Localizations[key] = targetLocalization
 		counter++
@@ -146,4 +149,32 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 	}
 
 	return file, nil
+}
+
+func (translator *ParadoxTranslator) translateLocalization(content string, targetLanguage *LocalizationLanguage) (string, error) {
+	requestContent := strings.ReplaceAll(content, "[", "<func>")
+	requestContent = strings.ReplaceAll(requestContent, "]", "</func>")
+	for strings.Contains(requestContent, "$") {
+		requestContent = strings.Replace(requestContent, "$", "<ref>", 1)
+		requestContent = strings.Replace(requestContent, "$", "</ref>", 1)
+	}
+
+	response, err := translator.Api.Translate(
+		[]string{requestContent},
+		translator.BaseLanguage.Locale,
+		targetLanguage.Locale,
+		[]string{"func", "ref"},
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	result := response.Translations[0].Translation
+	result = strings.ReplaceAll(result, "<func>", "[")
+	result = strings.ReplaceAll(result, "</func>", "]")
+	result = strings.ReplaceAll(result, "<ref>", "$")
+	result = strings.ReplaceAll(result, "</ref>", "$")
+
+	return result, nil
 }

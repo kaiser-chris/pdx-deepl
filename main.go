@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bahmut.de/pdx-deepl/deepl"
 	"bahmut.de/pdx-deepl/logging"
 	"bahmut.de/pdx-deepl/pdx"
-	"bahmut.de/pdx-deepl/translator"
 	"flag"
 	"fmt"
 	"net/url"
@@ -83,7 +83,7 @@ func main() {
 	}
 	logging.Infof("%sAPI Type:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedApiType)
 
-	translatorApi := translator.CreateApi(apiUrl, *token)
+	translatorApi := deepl.CreateApi(apiUrl, *token)
 	translatorPdx, err := pdx.CreateTranslator(resolvedConfigFile, resolvedLocalizationDirectory, translatorApi)
 	if err != nil {
 		logging.Fatalf("Could not initialize %sPDX Translator%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())

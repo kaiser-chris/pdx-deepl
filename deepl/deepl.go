@@ -1,4 +1,4 @@
-package translator
+package deepl
 
 import (
 	"bahmut.de/pdx-deepl/logging"
@@ -11,13 +11,16 @@ import (
 )
 
 type ApiRequest struct {
-	Translate  []string `json:"text"`
-	TargetLang string   `json:"target_lang"`
-	SourceLang string   `json:"source_lang"`
+	Translate        []string `json:"text"`
+	TargetLang       string   `json:"target_lang"`
+	SourceLang       string   `json:"source_lang"`
+	TagHandling      string   `json:"tag_handling"`
+	IgnoreTags       []string `json:"ignore_tags"`
+	OutlineDetection bool     `json:"outline_detection"`
 }
 
 type ApiResponse struct {
-	Translations []ApiTranslation `json:"translations"`
+	Translations []*ApiTranslation `json:"translations"`
 }
 
 type ApiTranslation struct {
@@ -37,16 +40,22 @@ func CreateApi(apiUrl *url.URL, token string) *DeeplApi {
 	}
 }
 
-func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang string) (ApiResponse, error) {
+func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang string, ignoreTags []string) (*ApiResponse, error) {
 	apiRequest := ApiRequest{
 		Translate:  translate,
 		TargetLang: targetLang,
 		SourceLang: sourceLang,
 	}
 
+	if ignoreTags != nil && len(ignoreTags) > 0 {
+		apiRequest.OutlineDetection = false
+		apiRequest.TagHandling = "xml"
+		apiRequest.IgnoreTags = ignoreTags
+	}
+
 	requestBody, err := json.Marshal(apiRequest)
 	if err != nil {
-		return ApiResponse{}, err
+		return nil, err
 	}
 
 	request, err := http.NewRequest(
@@ -55,7 +64,7 @@ func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang 
 		bytes.NewBuffer(requestBody),
 	)
 	if err != nil {
-		return ApiResponse{}, err
+		return nil, err
 	}
 	request.Header.Set("Authorization", "DeepL-Auth-Key "+api.Token)
 	request.Header.Set("Content-Type", "application/json")
@@ -63,29 +72,29 @@ func (api DeeplApi) Translate(translate []string, sourceLang string, targetLang 
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		return ApiResponse{}, err
+		return nil, err
 	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return ApiResponse{}, err
+		return nil, err
 	}
 
 	if response.StatusCode != 200 {
 		logging.Tracef("Deepl Response: %s", string(body))
-		return ApiResponse{}, errors.New(response.Status)
+		return nil, errors.New(response.Status)
 	}
 
 	var apiResponse ApiResponse
 	err = json.Unmarshal(body, &apiResponse)
 	if err != nil {
-		return ApiResponse{}, err
+		return nil, err
 	}
 
 	err = response.Body.Close()
 	if err != nil {
-		return ApiResponse{}, err
+		return nil, err
 	}
 
-	return apiResponse, err
+	return &apiResponse, nil
 }
