@@ -36,6 +36,7 @@ func (translator *ParadoxTranslator) Translate() error {
 	if err != nil {
 		return err
 	}
+	logging.Infof("%sBase Language:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, baseLanguage.Name)
 
 	translator.BaseLanguage = baseLanguage
 
@@ -44,12 +45,14 @@ func (translator *ParadoxTranslator) Translate() error {
 		if err != nil {
 			return err
 		}
+		logging.Infof("%sTranslating:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, targetLanguage.Name)
 		translatedLanguage, err := translator.translateTargetLanguage(targetLanguage, targetLanguageConfig.Glossary)
 		translator.TargetLanguages = append(translator.TargetLanguages, translatedLanguage)
 		err = targetLanguage.Write()
 		if err != nil {
 			return fmt.Errorf("error writing target language (%s): %v", targetLanguage.Name, err)
 		}
+		logging.Infof("%sTranslated:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, targetLanguage.Name)
 	}
 
 	return nil
