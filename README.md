@@ -105,6 +105,11 @@ But if your mod is big, it may make sense to look into the pro-plan.
 First download the latest release from the Releases page of the repository:
 - https://github.com/kaiser-chris/pdx-deepl/releases
 
+> The ZIP may be marked as a *Virus*.
+> This is a **false positive**!
+> 
+> If you do not trust this, then you can [build](#how-to-build) it yourself.
+
 Then you can run the application like this:
 ```
 .\pdx-deepl.exe --localization="X:\path\to\localization\directory" --api-token="your token"
@@ -134,7 +139,7 @@ The current version has issues when it is used with the **free** DeepL API:
 First download and install the Go SDK:
 - https://go.dev/doc/install
 
-Next open the project folder in a terminal (e.g. cmd) and run the following command:
+Next, open the project folder in a terminal (e.g. cmd) and run the following command:
 ```
 go build
 ```
