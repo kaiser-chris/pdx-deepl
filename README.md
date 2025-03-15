@@ -1,8 +1,11 @@
 # Overview
 **pdx-deepl** is a tool to do incremental auto translation of mods for Paradox games using DeepL.
 
+![Title Icon](github_icon_readme.jpg)
+
 ## Status
 [![Build Binaries](https://github.com/kaiser-chris/pdx-deepl/actions/workflows/build.yaml/badge.svg)](https://github.com/kaiser-chris/pdx-deepl/actions/workflows/build.yaml)
+[![GitHub Release](https://img.shields.io/github/v/release/kaiser-chris/pdx-deepl?display_name=release&label=Current%20Version&color=blue)](https://github.com/kaiser-chris/pdx-deepl/releases)
 
 ## How does it work?
 The tool will use a base language and check whether a localization key
