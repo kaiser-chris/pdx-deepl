@@ -6,10 +6,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
 )
+
+const ignoreTagStart = "<ignore>"
+const ignoreTagEnd = "</ignore>"
+
+var regexFormatting = regexp.MustCompile(`#[a-zA-Z]+\s`)
 
 type ParadoxTranslator struct {
 	Config                *TranslationConfiguration
@@ -161,18 +167,27 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 }
 
 func (translator *ParadoxTranslator) translateLocalization(content string, targetLanguage *LocalizationLanguage, glossary string) (string, error) {
-	requestContent := strings.ReplaceAll(content, "[", "<func>")
-	requestContent = strings.ReplaceAll(requestContent, "]", "</func>")
+	// Escape functions
+	requestContent := strings.ReplaceAll(content, "[", ignoreTagStart+"[")
+	requestContent = strings.ReplaceAll(requestContent, "]", "]"+ignoreTagEnd)
+
+	// Escape loc references
 	for strings.Contains(requestContent, "$") {
 		requestContent = strings.Replace(requestContent, "$", "<ref>", 1)
 		requestContent = strings.Replace(requestContent, "$", "</ref>", 1)
+	}
+
+	// Escape formatting
+	requestContent = strings.ReplaceAll(requestContent, "#!", ignoreTagStart+"#!"+ignoreTagEnd)
+	for _, formatting := range regexFormatting.FindAllString(requestContent, -1) {
+		requestContent = strings.ReplaceAll(requestContent, formatting, ignoreTagStart+formatting+ignoreTagEnd)
 	}
 
 	response, err := translator.Api.Translate(
 		[]string{requestContent},
 		translator.BaseLanguage.Locale,
 		targetLanguage.Locale,
-		[]string{"func", "ref"},
+		[]string{"ignore", "ref"},
 		glossary,
 	)
 
@@ -181,8 +196,8 @@ func (translator *ParadoxTranslator) translateLocalization(content string, targe
 	}
 
 	result := response.Translations[0].Translation
-	result = strings.ReplaceAll(result, "<func>", "[")
-	result = strings.ReplaceAll(result, "</func>", "]")
+	result = strings.ReplaceAll(result, ignoreTagStart, "")
+	result = strings.ReplaceAll(result, ignoreTagEnd, "")
 	result = strings.ReplaceAll(result, "<ref>", "$")
 	result = strings.ReplaceAll(result, "</ref>", "$")
 

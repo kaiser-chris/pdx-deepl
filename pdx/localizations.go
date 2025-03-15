@@ -15,7 +15,7 @@ import (
 )
 
 var utf8Bom = []byte{0xEF, 0xBB, 0xBF}
-var localizationRegex = regexp.MustCompile(`^\s*(?P<locKey>.+):\d*\s*"(?P<loc>.*)"\s*(?P<hash>#deepl:.*)?(?:#.*)?$`)
+var regexLocalization = regexp.MustCompile(`^\s*(?P<locKey>.+):\d*\s*"(?P<loc>.*)"\s*(?P<hash>#deepl:.*)?(?:#.*)?$`)
 var crc32q = crc32.MakeTable(0xD5828281)
 
 type LocalizationLanguage struct {
@@ -160,7 +160,7 @@ func readLocalizationFile(file string) (*LocalizationFile, error) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
-		matches := findAll(localizationRegex, line)
+		matches := findAll(regexLocalization, line)
 		checksum := crc32.Checksum([]byte(matches["loc"]), crc32q)
 		if len(matches) == 0 {
 			// skip line when there is no valid localization

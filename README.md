@@ -7,9 +7,10 @@
 * [How does it work?](#how-does-it-work)
 * [Manual and Machine translation](#manual-and-machine-translation)
 * [Supported Games](#supported-games)
+    * [Special Cases](#special-cases)
 * [Configuration](#configuration)
     * [Glossaries](#glossaries)
-    * [Ignore Files](#ignore-files)
+    * [Ignore Files](#ignoring-files)
 * [Getting DeepL API access](#getting-deepl-api-access)
 * [Usage](#usage)
 * [Issues with free DeepL API](#issues-with-free-deepl-api)
@@ -51,6 +52,24 @@ then preserved in further handling.
 - Victoria 3
 - Crusader Kings 3
 - Others may work but are untested
+
+### Special Cases
+The translator automatically escapes localization tags.
+
+The following formats are currently escaped:
+#### Formatting
+  - Example: `#bold Some Text#!`
+  - Formatting like `bold` but also any other formatting is escaped
+  - Anything starting with a `#` directly followed by text and then a space is not translated
+  - Also ending of formatting `#!` is escaped so that it does not get changed
+#### Functions
+  - Example: `Country [Country.GetName]`
+  - Functions like these are escaped
+  - Anything inside of `[]` is not translated
+#### References
+  - Example: `some $another_loc_key$ text`
+  - Referenced like these are escaped
+  - Anything inside two `$` is not translated
 
 ## Configuration
 pdx-deepl translation can be configured with the [translation-config.json](translation-config.json).
