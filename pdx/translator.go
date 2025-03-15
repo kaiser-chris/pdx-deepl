@@ -118,7 +118,9 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 		file = targetFile
 	}
 
-	counter := 0
+	counterManual := 0
+	counterUpToDate := 0
+	counterTranslated := 0
 	for key, localization := range baseFile.Localizations {
 		targetLocalization, ok := file.Localizations[key]
 		if !ok {
@@ -130,11 +132,13 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 		if targetLocalization.CompareChecksum == 0 {
 			// Don't touch manual localizations
 			// in the target language
+			counterManual++
 			continue
 		}
 		if localization.Checksum == targetLocalization.CompareChecksum {
 			// Localization was already translated
 			// and is up to date
+			counterUpToDate++
 			continue
 		}
 		response, err := translator.translateLocalization(localization.Text, targetLanguage, glossary)
@@ -155,12 +159,37 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 		targetLocalization.Text = response
 		targetLocalization.CompareChecksum = localization.Checksum
 		file.Localizations[key] = targetLocalization
-		counter++
+		counterTranslated++
 	}
 
 	targetLanguage.Files[baseFile.Key] = file
-	if counter > 0 {
-		logging.Infof("Translated %d localization keys in file: %s", counter, file.FileName)
+	if counterTranslated > 0 {
+		logging.Infof(
+			"%s%s%s: Translated %s%d%s localization keys",
+			logging.AnsiBoldOn, file.FileName, logging.AnsiAllDefault,
+			logging.AnsiBoldOn, counterTranslated, logging.AnsiAllDefault,
+		)
+	}
+	if counterManual > 0 {
+		logging.Infof(
+			"%s%s%s: Found %s%d%s manually translated localization keys",
+			logging.AnsiBoldOn, file.FileName, logging.AnsiAllDefault,
+			logging.AnsiBoldOn, counterManual, logging.AnsiAllDefault,
+		)
+	}
+	if counterUpToDate > 0 {
+		logging.Infof(
+			"%s%s%s: Found %s%d%s up to date localization keys",
+			logging.AnsiBoldOn, file.FileName, logging.AnsiAllDefault,
+			logging.AnsiBoldOn, counterUpToDate, logging.AnsiAllDefault,
+		)
+	}
+	if counterUpToDate == 0 && counterTranslated == 0 && counterManual == 0 {
+		logging.Warnf(
+			"%s%s%s: Translated %sno%s localization keys",
+			logging.AnsiBoldOn, file.FileName, logging.AnsiAllDefault,
+			logging.AnsiBoldOn, logging.AnsiAllDefault,
+		)
 	}
 
 	return file, nil
