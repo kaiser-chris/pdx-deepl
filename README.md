@@ -115,3 +115,14 @@ The current version has issues when it is used with the **free** DeepL API:
 - The current implementation skips further loc keys in the same file when it encounters the issue. Since the whole thing is incremental, you have to rerun the application to generate more keys. For my `german` translation, I had to run it quite a lot of times, but I got it done in the end.
 - There IS a monthly character limit of 500k for the free API, which may be an issue when translating a big mod. But running it on another developer's PC with a different account should enable generating more translations
 - I recommend starting with one language instead of multiple
+
+## How To Build
+First download and install the Go SDK:
+- https://go.dev/doc/install
+
+Next open the project folder in a terminal (e.g. cmd) and run the following command:
+```
+go build
+```
+
+That is it. There should be an executable in the project folder now.
