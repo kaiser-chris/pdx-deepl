@@ -9,6 +9,7 @@
 * [Supported Games](#supported-games)
 * [Configuration](#configuration)
     * [Glossaries](#glossaries)
+    * [Ignore Files](#ignore-files)
 * [Getting DeepL API access](#getting-deepl-api-access)
 * [Usage](#usage)
 * [Issues with free DeepL API](#issues-with-free-deepl-api)
@@ -84,6 +85,26 @@ Glossaries can be referenced using their id in the config file:
       "name": "german",
       "glossary": "your-glossary-id"
     }
+  ]
+}
+```
+
+### Ignore Files
+You are able to ignore localization files by adding them to the ignore list.
+
+pdx-deepl will fully ignore files that are in this list and won't try to translate them.
+
+The ignore list contains filenames of files that should not be translated:
+```json
+{
+  "base-language": "english",
+  "target-languages": [
+    {
+      "name": "german"
+    }
+  ],
+  "ignore-files": [
+    "your_loc_file_l_english.yml"
   ]
 }
 ```

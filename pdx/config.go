@@ -11,6 +11,7 @@ const DefaultConfigFile = "translation-config.json"
 type TranslationConfiguration struct {
 	BaseLanguage    string                              `json:"base-language"`
 	TargetLanguages []*TranslationConfigurationLanguage `json:"target-languages"`
+	IgnoreFiles     []string                            `json:"ignore-files"`
 }
 
 type TranslationConfigurationLanguage struct {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -80,6 +81,9 @@ func (translator *ParadoxTranslator) translateTargetLanguage(targetLanguage *Loc
 		if err != nil {
 			return nil, err
 		}
+		if translatedFile == nil {
+			continue
+		}
 		targetLanguage.Files[key] = translatedFile
 	}
 
@@ -87,6 +91,11 @@ func (translator *ParadoxTranslator) translateTargetLanguage(targetLanguage *Loc
 }
 
 func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *LocalizationFile, targetLanguage *LocalizationLanguage, glossary string) (*LocalizationFile, error) {
+	if slices.Contains(translator.Config.IgnoreFiles, baseFile.FileName) {
+		logging.Warnf("Skipped ignored file: %s", baseFile.FileName)
+		return nil, nil
+	}
+
 	var file *LocalizationFile
 	if targetFile == nil {
 		tag := fmt.Sprintf("l_%s.yml", targetLanguage.Name)
