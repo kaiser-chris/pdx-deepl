@@ -13,12 +13,12 @@ import (
 type ParadoxTranslator struct {
 	Config                *TranslationConfiguration
 	LocalizationDirectory string
-	Api                   *deepl.DeeplApi
+	Api                   *deepl.Api
 	BaseLanguage          *LocalizationLanguage
 	TargetLanguages       []*LocalizationLanguage
 }
 
-func CreateTranslator(configFile, localizationDirectory string, api *deepl.DeeplApi) (*ParadoxTranslator, error) {
+func CreateTranslator(configFile, localizationDirectory string, api *deepl.Api) (*ParadoxTranslator, error) {
 	config, err := readConfigFile(configFile)
 	if err != nil {
 		return nil, err

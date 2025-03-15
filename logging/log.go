@@ -131,12 +131,12 @@ func (logger *Logger) Errorf(format string, v ...any) {
 }
 
 func (logger *Logger) Fatal(v ...any) {
-	logger.SetPrefix(PrefixError)
+	logger.SetPrefix(PrefixFatal)
 	logger.Logger.Fatal(v...)
 }
 
 func (logger *Logger) Fatalf(format string, v ...any) {
-	logger.SetPrefix(PrefixError)
+	logger.SetPrefix(PrefixFatal)
 	logger.Logger.Fatalf(format, v...)
 }
 

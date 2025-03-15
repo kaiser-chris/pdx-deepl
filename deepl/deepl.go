@@ -29,19 +29,19 @@ type ApiTranslation struct {
 	Translation string `json:"text"`
 }
 
-type DeeplApi struct {
+type Api struct {
 	ApiUrl *url.URL
 	Token  string
 }
 
-func CreateApi(apiUrl *url.URL, token string) *DeeplApi {
-	return &DeeplApi{
+func CreateApi(apiUrl *url.URL, token string) *Api {
+	return &Api{
 		ApiUrl: apiUrl,
 		Token:  token,
 	}
 }
 
-func (api DeeplApi) Translate(
+func (api Api) Translate(
 	translate []string,
 	sourceLang string,
 	targetLang string,
