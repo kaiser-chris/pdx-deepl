@@ -3,6 +3,17 @@
 
 ![Title Icon](github_icon_readme.jpg)
 
+## Contents
+* [How does it work?](#how-does-it-work)
+* [Manual and Machine translation](#manual-and-machine-translation)
+* [Supported Games](#supported-games)
+* [Configuration](#configuration)
+    * [Glossaries](#glossaries)
+* [Getting DeepL API access](#getting-deepl-api-access)
+* [Usage](#usage)
+* [Issues with free DeepL API](#issues-with-free-deepl-api)
+* [How To Build](#how-to-build)
+
 ## Status
 [![Build Binaries](https://github.com/kaiser-chris/pdx-deepl/actions/workflows/build.yaml/badge.svg)](https://github.com/kaiser-chris/pdx-deepl/actions/workflows/build.yaml)
 [![GitHub Release](https://img.shields.io/github/v/release/kaiser-chris/pdx-deepl?display_name=release&label=Current%20Version&color=blue)](https://github.com/kaiser-chris/pdx-deepl/releases)
