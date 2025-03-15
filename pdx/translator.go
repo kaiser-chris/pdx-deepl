@@ -46,10 +46,7 @@ func (translator *ParadoxTranslator) Translate() error {
 		}
 		translatedLanguage, err := translator.translateTargetLanguage(targetLanguage, targetLanguageConfig.Glossary)
 		translator.TargetLanguages = append(translator.TargetLanguages, translatedLanguage)
-	}
-
-	for _, targetLanguage := range translator.TargetLanguages {
-		err := targetLanguage.Write()
+		err = targetLanguage.Write()
 		if err != nil {
 			return fmt.Errorf("error writing target language (%s): %v", targetLanguage.Name, err)
 		}
