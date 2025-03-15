@@ -89,7 +89,10 @@ Glossaries can be referenced using their id in the config file:
 }
 ```
 
-### Ignore Files
+How to use the DeepL API to create and manage glossaries is documented here:
+- https://developers.deepl.com/docs/api-reference/glossaries
+
+### Ignoring Files
 You are able to ignore localization files by adding them to the ignore list.
 
 pdx-deepl will fully ignore files that are in this list and won't try to translate them.
@@ -108,9 +111,6 @@ The ignore list contains filenames of files that should not be translated:
   ]
 }
 ```
-
-How to use the DeepL API to create and manage glossaries is documented here:
-- https://developers.deepl.com/docs/api-reference/glossaries
 
 ## Getting DeepL API access
 DeepL offers free and pro plans for translations.
