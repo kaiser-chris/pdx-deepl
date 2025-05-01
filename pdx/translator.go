@@ -30,6 +30,14 @@ func CreateTranslator(configFile, localizationDirectory string, api *deepl.Api) 
 	if err != nil {
 		return nil, err
 	}
+	targetLanguages := make([]string, len(config.TargetLanguages))
+	logging.Infof(
+		"%sFound %d Target Languages:%s %s",
+		logging.AnsiBoldOn,
+		len(config.TargetLanguages),
+		logging.AnsiAllDefault,
+		strings.Join(targetLanguages, ", "),
+	)
 
 	return &ParadoxTranslator{
 		Config:                config,
@@ -55,10 +63,10 @@ func (translator *ParadoxTranslator) Translate() error {
 		logging.Infof("%sTranslating:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, targetLanguage.Name)
 		translatedLanguage, err := translator.translateTargetLanguage(targetLanguage, targetLanguageConfig.Glossary)
 		translator.TargetLanguages = append(translator.TargetLanguages, translatedLanguage)
-		err = targetLanguage.Write()
-		if err != nil {
-			return fmt.Errorf("error writing target language (%s): %v", targetLanguage.Name, err)
-		}
+		//err = targetLanguage.Write()
+		//if err != nil {
+		//	return fmt.Errorf("error writing target language (%s): %v", targetLanguage.Name, err)
+		//}
 		logging.Infof("%sTranslated:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, targetLanguage.Name)
 	}
 
@@ -96,7 +104,12 @@ func (translator *ParadoxTranslator) translateTargetLanguage(targetLanguage *Loc
 	return targetLanguage, nil
 }
 
-func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *LocalizationFile, targetLanguage *LocalizationLanguage, glossary string) (*LocalizationFile, error) {
+func (translator *ParadoxTranslator) translateTargetFile(
+	baseFile,
+	targetFile *LocalizationFile,
+	targetLanguage *LocalizationLanguage,
+	glossary string,
+) (*LocalizationFile, error) {
 	if slices.Contains(translator.Config.IgnoreFiles, baseFile.FileName) {
 		logging.Warnf("Skipped ignored file: %s", baseFile.FileName)
 		return nil, nil
@@ -117,10 +130,15 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 	} else {
 		file = targetFile
 	}
+	logging.Infof(
+		"%s%s%s: Starting",
+		logging.AnsiBoldOn, file.FileName, logging.AnsiAllDefault,
+	)
 
 	counterManual := 0
 	counterUpToDate := 0
 	counterTranslated := 0
+	counterError := 0
 	for key, localization := range baseFile.Localizations {
 		targetLocalization, ok := file.Localizations[key]
 		if !ok {
@@ -146,23 +164,40 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 		if err != nil {
 			// Too many requests
 			if strings.Contains(err.Error(), "429") {
-				logging.Errorf("Stopped translation for file (%s) because of: %v", baseFile.FileName, err)
-				time.Sleep(1000 * time.Millisecond)
-				break
+				logging.Errorf("Too many API requests in file (%s) waiting 10 seconds: %v", baseFile.FileName, err)
+				time.Sleep(10000 * time.Millisecond)
 			}
 
-			// Localization was already translated
-			// and is up to date
-			logging.Warnf("Ignored localization key (%s) in file (%s) because of an error: %s", key, baseFile.FileName, err)
-			continue
+			// Translation Error
+			logging.Warnf("Skipped localization key (%s) in file (%s) because of an error: %s", key, baseFile.FileName, err)
+			targetLocalization.Text = localization.Text
+			targetLocalization.CompareChecksum = skippedChecksum
+			file.Localizations[key] = targetLocalization
+			counterError++
+		} else {
+			targetLocalization.Text = response
+			targetLocalization.CompareChecksum = localization.Checksum
+			file.Localizations[key] = targetLocalization
+			counterTranslated++
 		}
-		targetLocalization.Text = response
-		targetLocalization.CompareChecksum = localization.Checksum
-		file.Localizations[key] = targetLocalization
-		counterTranslated++
 	}
 
-	targetLanguage.Files[baseFile.Key] = file
+	err := file.WriteFile(
+		baseFile,
+		translator.BaseLanguage,
+		targetLanguage,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not write target file (%s): %v", file.FileName, err)
+	}
+
+	if counterError > 0 {
+		logging.Errorf(
+			"%s%s%s: Skipped %s%d%s localization keys because of an error",
+			logging.AnsiBoldOn, file.FileName, logging.AnsiAllDefault,
+			logging.AnsiBoldOn, counterError, logging.AnsiAllDefault,
+		)
+	}
 	if counterTranslated > 0 {
 		logging.Infof(
 			"%s%s%s: Translated %s%d%s localization keys",
@@ -192,6 +227,7 @@ func (translator *ParadoxTranslator) translateTargetFile(baseFile, targetFile *L
 		)
 	}
 
+	targetLanguage.Files[baseFile.Key] = file
 	return file, nil
 }
 

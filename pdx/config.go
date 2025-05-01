@@ -22,13 +22,13 @@ type TranslationConfigurationLanguage struct {
 func readConfigFile(path string) (*TranslationConfiguration, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load config file: %s", err)
 	}
 
 	var translationConfiguration TranslationConfiguration
 	err = json.Unmarshal(data, &translationConfiguration)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse config file: %s", err)
 	}
 
 	if len(translationConfiguration.TargetLanguages) == 0 {

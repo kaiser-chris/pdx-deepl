@@ -9,12 +9,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 )
 
-var utf8Bom = []byte{0xEF, 0xBB, 0xBF}
+const skippedHash = "skipped"
+const skippedChecksum = 1
+
 var regexLocalization = regexp.MustCompile(`^\s*(?P<locKey>.+):\d*\s*"(?P<loc>.*)"\s*(?P<hash>#deepl:.*)?(?:#.*)?$`)
 var crc32q = crc32.MakeTable(0xD5828281)
 
@@ -39,44 +40,12 @@ type Localization struct {
 	CompareChecksum uint32
 }
 
-func (language *LocalizationLanguage) Write() error {
-	for _, file := range language.Files {
-		err := file.Write(language)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (file *LocalizationFile) Write(language *LocalizationLanguage) error {
-	var fileBuilder strings.Builder
-	fileBuilder.WriteString("l_")
-	fileBuilder.WriteString(language.Name)
-	fileBuilder.WriteString(":\n")
-
-	keys := make([]string, 0, len(file.Localizations))
-	for key := range file.Localizations {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		localization := file.Localizations[key]
-		fileBuilder.WriteString(" ")
-		fileBuilder.WriteString(localization.Key)
-		fileBuilder.WriteString(": \"")
-		fileBuilder.WriteString(localization.Text)
-		fileBuilder.WriteString("\"")
-		if localization.CompareChecksum != 0 {
-			fileBuilder.WriteString(" #deepl:")
-			fileBuilder.WriteString(strconv.Itoa(int(localization.CompareChecksum)))
-			fileBuilder.WriteString("\n")
-		} else {
-			fileBuilder.WriteString("\n")
-		}
-	}
-
+func (file *LocalizationFile) WriteFile(
+	baseFile *LocalizationFile,
+	baseLanguage *LocalizationLanguage,
+	targetLanguage *LocalizationLanguage,
+) error {
+	// Create target language directories
 	if _, err := os.Stat(filepath.Dir(file.Path)); os.IsNotExist(err) {
 		err := os.MkdirAll(filepath.Dir(file.Path), 0755)
 		if err != nil {
@@ -84,14 +53,64 @@ func (file *LocalizationFile) Write(language *LocalizationLanguage) error {
 		}
 	}
 
-	content := append(utf8Bom, []byte(fileBuilder.String())...)
-
-	err := os.WriteFile(file.Path, content, 0644)
+	// Read the baseFile language file
+	baseContent, err := os.ReadFile(baseFile.Path)
 	if err != nil {
 		return err
 	}
+	targetContent := string(baseContent)
 
-	return nil
+	// Replace language Tag
+	targetContent = strings.Replace(
+		targetContent,
+		"l_"+baseLanguage.Name+":",
+		"l_"+targetLanguage.Name+":",
+		1,
+	)
+
+	keys := make([]string, 0, len(file.Localizations))
+	for key := range file.Localizations {
+		keys = append(keys, key)
+	}
+
+	// Replace relevant lines
+	for line := range strings.Lines(targetContent) {
+		for _, key := range keys {
+			matches := findAll(regexLocalization, line)
+			localization := file.Localizations[key]
+			if matches["locKey"] != key {
+				continue
+			}
+			var lineBuilder strings.Builder
+			lineBuilder.WriteString(" ")
+			lineBuilder.WriteString(localization.Key)
+			lineBuilder.WriteString(": \"")
+			lineBuilder.WriteString(localization.Text)
+			lineBuilder.WriteString("\"")
+			if localization.CompareChecksum == skippedChecksum {
+				lineBuilder.WriteString(" #deepl:")
+				lineBuilder.WriteString(skippedHash)
+			} else if localization.CompareChecksum != 0 {
+				lineBuilder.WriteString(" #deepl:")
+				lineBuilder.WriteString(strconv.Itoa(int(localization.CompareChecksum)))
+			}
+			if strings.HasSuffix(line, "\r\n") {
+				lineBuilder.WriteString("\r\n")
+			} else {
+				lineBuilder.WriteString("\n")
+			}
+
+			targetContent = strings.Replace(
+				targetContent,
+				line,
+				lineBuilder.String(),
+				1,
+			)
+			break
+		}
+	}
+
+	return os.WriteFile(file.Path, []byte(targetContent), 0644)
 }
 
 func readLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
@@ -172,7 +191,7 @@ func readLocalizationFile(file string) (*LocalizationFile, error) {
 			Text:     matches["loc"],
 			Checksum: checksum,
 		}
-		if matches["hash"] != "" {
+		if matches["hash"] != "" && !strings.Contains(matches["hash"], "#deepl:"+skippedHash) {
 			pureHash, _ := strings.CutPrefix(matches["hash"], "#deepl:")
 			checksum, err := strconv.Atoi(pureHash)
 			if err == nil {

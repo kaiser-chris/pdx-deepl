@@ -92,7 +92,7 @@ func main() {
 		}
 		apiUrl = parsedUrl
 	case ApiPaid:
-		parsedUrl, err := url.Parse("https://api.deepl.com/v2/translate")
+		parsedUrl, err := url.Parse("https://api.deepl.com/v2/")
 		if err != nil {
 			logging.Fatal("Could not parse paid api url")
 			os.Exit(1)
