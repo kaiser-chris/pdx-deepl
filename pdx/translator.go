@@ -117,10 +117,14 @@ func (translator *ParadoxTranslator) translateTargetFile(
 
 	var file *LocalizationFile
 	if targetFile == nil {
-		tag := fmt.Sprintf("l_%s.yml", targetLanguage.Name)
-		name := baseFile.Key + tag
-		basePath := strings.Replace(filepath.Dir(baseFile.Path), translator.BaseLanguage.Name, targetLanguage.Name, 1)
-		path := filepath.Join(basePath, name)
+		baseTag := fmt.Sprintf("l_%s.yml", translator.BaseLanguage.Name)
+		targetTag := fmt.Sprintf("l_%s.yml", targetLanguage.Name)
+		name := strings.ReplaceAll(
+			baseFile.FileName,
+			baseTag,
+			targetTag,
+		)
+		path := filepath.Join(translator.LocalizationDirectory, targetLanguage.Name, name)
 		file = &LocalizationFile{
 			Key:           baseFile.Key,
 			Path:          path,

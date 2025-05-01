@@ -139,7 +139,7 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 		if info.IsDir() {
 			return nil
 		}
-		localization, err := readLocalizationFile(path)
+		localization, err := readLocalizationFile(path, &language)
 		if err != nil {
 			return err
 		}
@@ -162,13 +162,13 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 	return &language, nil
 }
 
-func readLocalizationFile(file string) (*LocalizationFile, error) {
+func readLocalizationFile(file string, language *LocalizationLanguage) (*LocalizationFile, error) {
 	reader, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
 
-	filename := filepath.Base(file)
+	filename := file[len(language.Directory)+1:]
 
 	localizationFile := &LocalizationFile{
 		FileName:      filename,
