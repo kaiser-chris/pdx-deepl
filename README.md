@@ -116,7 +116,7 @@ You are able to ignore localization files by adding them to the ignore list.
 
 pdx-deepl will fully ignore files that are in this list and won't try to translate them.
 
-The ignore list contains filenames of files that should not be translated:
+The ignore list contains relative (from the language root) paths of files that should not be translated:
 ```json
 {
   "base-language": "english",
@@ -126,9 +126,26 @@ The ignore list contains filenames of files that should not be translated:
     }
   ],
   "ignore-files": [
-    "your_loc_file_l_english.yml"
+    "your_loc_file_l_english.yml",
+    "sub_directory/your_other_loc_file_l_english.yml"
   ]
 }
+```
+
+## Statistics
+When pdx-deepl is started with the `-stats` command it will produce statistics about file and character counts.
+These can be quite helpful in evaluating costs or the usage budget.
+
+Statistics will look like this:
+```
+INFO 2025/05/02 01:12:49 API Type: free
+INFO 2025/05/02 01:12:49 API Character Usage: 97919
+INFO 2025/05/02 01:12:49 API Character Limit: 500000
+INFO 2025/05/02 01:12:49 Target Language(s): german
+INFO 2025/05/02 01:12:49 Base Language: english
+INFO 2025/05/02 01:12:49 Localization Files: 62
+INFO 2025/05/02 01:12:49 Localization Keys: 2456
+INFO 2025/05/02 01:12:49 Total Characters: 159155
 ```
 
 ## Getting DeepL API access
