@@ -11,6 +11,7 @@
 * [Configuration](#configuration)
     * [Glossaries](#glossaries)
     * [Ignore Files](#ignoring-files)
+* [Statistics](#statistics)
 * [Getting DeepL API access](#getting-deepl-api-access)
 * [Usage](#usage)
 * [Issues with free DeepL API](#issues-with-free-deepl-api)
