@@ -20,6 +20,7 @@ const (
 	FlagApiType      = "api-type"
 	FlagApiToken     = "api-token"
 	FlagConfig       = "config"
+	FlagStatistics   = "stats"
 	FlagLocalization = "localization"
 )
 
@@ -28,6 +29,7 @@ func main() {
 	apiType := flag.String(FlagApiType, ApiFree, "Optional: Whether to use free or paid Deepl API")
 	token := flag.String(FlagApiToken, "", "Required: Deepl API Token")
 	config := flag.String(FlagConfig, pdx.DefaultConfigFile, "Optional: Path to translation config file")
+	stats := flag.Bool(FlagStatistics, false, "Optional: When set produces relevant statistics about the localization like the character count")
 	flag.Parse()
 
 	if token == nil || *token == "" {
@@ -118,6 +120,16 @@ func main() {
 		logging.Fatalf("Could not initialize %sPDX Translator%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())
 		os.Exit(1)
 	}
+
+	if stats != nil && *stats {
+		err = translatorPdx.Statistics()
+		if err != nil {
+			logging.Fatalf("Could not calculate %sStatistics%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())
+			os.Exit(1)
+		}
+		return
+	}
+
 	err = translatorPdx.Translate()
 	if err != nil {
 		logging.Fatalf("Could not run %sPDX Translator%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())

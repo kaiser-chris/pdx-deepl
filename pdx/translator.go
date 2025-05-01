@@ -14,6 +14,8 @@ import (
 
 const ignoreTagStart = "<ignore>"
 const ignoreTagEnd = "</ignore>"
+const referenceTagStart = "<ref>"
+const referenceTagEnd = "</ref>"
 
 var regexFormatting = regexp.MustCompile(`#[a-zA-Z]+\s`)
 
@@ -31,10 +33,12 @@ func CreateTranslator(configFile, localizationDirectory string, api *deepl.Api) 
 		return nil, err
 	}
 	targetLanguages := make([]string, len(config.TargetLanguages))
+	for i, language := range config.TargetLanguages {
+		targetLanguages[i] = language.Name
+	}
 	logging.Infof(
-		"%sFound %d Target Languages:%s %s",
+		"%sTarget Language(s):%s %s",
 		logging.AnsiBoldOn,
-		len(config.TargetLanguages),
 		logging.AnsiAllDefault,
 		strings.Join(targetLanguages, ", "),
 	)
@@ -63,10 +67,6 @@ func (translator *ParadoxTranslator) Translate() error {
 		logging.Infof("%sTranslating:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, targetLanguage.Name)
 		translatedLanguage, err := translator.translateTargetLanguage(targetLanguage, targetLanguageConfig.Glossary)
 		translator.TargetLanguages = append(translator.TargetLanguages, translatedLanguage)
-		//err = targetLanguage.Write()
-		//if err != nil {
-		//	return fmt.Errorf("error writing target language (%s): %v", targetLanguage.Name, err)
-		//}
 		logging.Infof("%sTranslated:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, targetLanguage.Name)
 	}
 
@@ -231,15 +231,15 @@ func (translator *ParadoxTranslator) translateTargetFile(
 	return file, nil
 }
 
-func (translator *ParadoxTranslator) translateLocalization(content string, targetLanguage *LocalizationLanguage, glossary string) (string, error) {
+func escape(content string) string {
 	// Escape functions
 	requestContent := strings.ReplaceAll(content, "[", ignoreTagStart+"[")
 	requestContent = strings.ReplaceAll(requestContent, "]", "]"+ignoreTagEnd)
 
 	// Escape loc references
 	for strings.Contains(requestContent, "$") {
-		requestContent = strings.Replace(requestContent, "$", "<ref>", 1)
-		requestContent = strings.Replace(requestContent, "$", "</ref>", 1)
+		requestContent = strings.Replace(requestContent, "$", referenceTagStart, 1)
+		requestContent = strings.Replace(requestContent, "$", referenceTagEnd, 1)
 	}
 
 	// Escape formatting
@@ -247,7 +247,19 @@ func (translator *ParadoxTranslator) translateLocalization(content string, targe
 	for _, formatting := range regexFormatting.FindAllString(requestContent, -1) {
 		requestContent = strings.ReplaceAll(requestContent, formatting, ignoreTagStart+formatting+ignoreTagEnd)
 	}
+	return requestContent
+}
 
+func normalize(content string) string {
+	result := strings.ReplaceAll(content, ignoreTagStart, "")
+	result = strings.ReplaceAll(result, ignoreTagEnd, "")
+	result = strings.ReplaceAll(result, referenceTagStart, "$")
+	result = strings.ReplaceAll(result, referenceTagEnd, "$")
+	return result
+}
+
+func (translator *ParadoxTranslator) translateLocalization(content string, targetLanguage *LocalizationLanguage, glossary string) (string, error) {
+	requestContent := escape(content)
 	response, err := translator.Api.Translate(
 		[]string{requestContent},
 		translator.BaseLanguage.Locale,
@@ -255,16 +267,8 @@ func (translator *ParadoxTranslator) translateLocalization(content string, targe
 		[]string{"ignore", "ref"},
 		glossary,
 	)
-
 	if err != nil {
 		return "", err
 	}
-
-	result := response.Translations[0].Translation
-	result = strings.ReplaceAll(result, ignoreTagStart, "")
-	result = strings.ReplaceAll(result, ignoreTagEnd, "")
-	result = strings.ReplaceAll(result, "<ref>", "$")
-	result = strings.ReplaceAll(result, "</ref>", "$")
-
-	return result, nil
+	return normalize(response.Translations[0].Translation), nil
 }

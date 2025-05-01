@@ -72,7 +72,7 @@ The following formats are currently escaped:
   - Anything inside two `$` is not translated
 
 ## Configuration
-pdx-deepl translation can be configured with the [translation-config.json](translation-config.json).
+pdx-deepl translation needs to be configured with a [translation-config.json](translation-config.json).
 In this file, you can define which language should be used as a base for translations and also
 which languages should be generated.
 
@@ -159,13 +159,15 @@ All start commands can be found in the help dialog. Help dialog (`.\pdx-deepl.ex
 ```
 Usage of pdx-deepl:
   -api-token string
-    	Required: Deepl API Token
+        Required: Deepl API Token
   -api-type string
-    	Optional: Whether to use free or paid Deepl API (default "free")
+        Optional: Whether to use free or paid Deepl API (default "free")
   -config string
-    	Optional: Path to translation config file (default "translation-config.json")
+        Optional: Path to translation config file (default "translation-config.json")
   -localization string
-    	Optional: Path to localization directory of your mod (default ".")
+        Optional: Path to localization directory of your mod (default ".")
+  -stats
+        Optional: When set produces relevant statistics about the localization like the character count
 ```
 
 ## Issues with free DeepL API
