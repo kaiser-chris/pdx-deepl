@@ -75,8 +75,8 @@ jobs:
 
       - name: Checkout tags
         run: |
-          git config --global user.name 'Chris Kaiser'
-          git config --global user.email 'kaiser-chris@users.noreply.github.com'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch --prune --unshallow --tags
 
       - name: Get latest version

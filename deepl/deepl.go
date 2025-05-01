@@ -10,7 +10,10 @@ import (
 	"net/url"
 )
 
-type ApiRequest struct {
+const EndpointTranslate = "translate"
+const EndpointUsage = "usage"
+
+type TranslationRequest struct {
 	Translate        []string `json:"text"`
 	TargetLang       string   `json:"target_lang"`
 	SourceLang       string   `json:"source_lang"`
@@ -20,8 +23,13 @@ type ApiRequest struct {
 	Glossary         string   `json:"glossary_id"`
 }
 
-type ApiResponse struct {
+type TranslationResponse struct {
 	Translations []*ApiTranslation `json:"translations"`
+}
+
+type UsageResponse struct {
+	CharacterCount int `json:"character_count"`
+	CharacterLimit int `json:"character_limit"`
 }
 
 type ApiTranslation struct {
@@ -41,18 +49,68 @@ func CreateApi(apiUrl *url.URL, token string) *Api {
 	}
 }
 
+func (api Api) Usage() (*UsageResponse, error) {
+	usageUrl := api.ApiUrl.JoinPath(EndpointUsage)
+	request, err := http.NewRequest(
+		"GET",
+		usageUrl.String(),
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Authorization", "DeepL-Auth-Key "+api.Token)
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode == 403 {
+		logging.Tracef("Deepl Response: %s", string(body))
+		return nil, errors.New("invalid token")
+	}
+
+	if response.StatusCode != 200 {
+		logging.Tracef("Deepl Response: %s", string(body))
+		return nil, errors.New(response.Status)
+	}
+
+	var apiResponse UsageResponse
+	err = json.Unmarshal(body, &apiResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	err = response.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return &apiResponse, nil
+}
+
 func (api Api) Translate(
 	translate []string,
 	sourceLang string,
 	targetLang string,
 	ignoreTags []string,
 	glossary string,
-) (*ApiResponse, error) {
-	apiRequest := ApiRequest{
+) (*TranslationResponse, error) {
+	apiRequest := TranslationRequest{
 		Translate:  translate,
 		TargetLang: targetLang,
 		SourceLang: sourceLang,
 	}
+
+	translateUrl := api.ApiUrl.JoinPath(EndpointTranslate)
 
 	if ignoreTags != nil && len(ignoreTags) > 0 {
 		apiRequest.OutlineDetection = false
@@ -71,7 +129,7 @@ func (api Api) Translate(
 
 	request, err := http.NewRequest(
 		"POST",
-		api.ApiUrl.String(),
+		translateUrl.String(),
 		bytes.NewBuffer(requestBody),
 	)
 	if err != nil {
@@ -91,12 +149,17 @@ func (api Api) Translate(
 		return nil, err
 	}
 
+	if response.StatusCode == 403 {
+		logging.Tracef("Deepl Response: %s", string(body))
+		return nil, errors.New("invalid token")
+	}
+
 	if response.StatusCode != 200 {
 		logging.Tracef("Deepl Response: %s", string(body))
 		return nil, errors.New(response.Status)
 	}
 
-	var apiResponse ApiResponse
+	var apiResponse TranslationResponse
 	err = json.Unmarshal(body, &apiResponse)
 	if err != nil {
 		return nil, err

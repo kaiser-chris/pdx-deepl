@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -42,7 +43,17 @@ func main() {
 		resolvedConfigFile = *config
 	}
 
-	logging.Infof("%sTranslation Config:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedConfigFile)
+	configPath, err := filepath.Abs(resolvedConfigFile)
+	if err != nil {
+		logging.Fatalf("Could not load config file: %s", err)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		logging.Fatalf("Config file does not exist: %s", configPath)
+		os.Exit(1)
+	}
+
+	logging.Infof("%sTranslation Config:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, configPath)
 
 	var resolvedLocalizationDirectory string
 	if localizationLocation == nil || *localizationLocation == "" {
@@ -51,7 +62,17 @@ func main() {
 		resolvedLocalizationDirectory = *localizationLocation
 	}
 
-	logging.Infof("%sLocalization Directory:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedLocalizationDirectory)
+	localizationPath, err := filepath.Abs(resolvedLocalizationDirectory)
+	if err != nil {
+		logging.Fatalf("Could not load Localization directory: %s", err)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(localizationPath); os.IsNotExist(err) {
+		logging.Fatalf("Localization directory does not exist: %s", localizationPath)
+		os.Exit(1)
+	}
+
+	logging.Infof("%sLocalization Directory:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, localizationPath)
 
 	var apiUrl *url.URL
 
@@ -65,7 +86,7 @@ func main() {
 
 	switch resolvedApiType {
 	case ApiFree:
-		parsedUrl, err := url.Parse("https://api-free.deepl.com/v2/translate")
+		parsedUrl, err := url.Parse("https://api-free.deepl.com/v2/")
 		if err != nil {
 			logging.Fatal("Could not parse free api url")
 		}
@@ -84,6 +105,14 @@ func main() {
 	logging.Infof("%sAPI Type:%s %s", logging.AnsiBoldOn, logging.AnsiAllDefault, resolvedApiType)
 
 	translatorApi := deepl.CreateApi(apiUrl, *token)
+	response, err := translatorApi.Usage()
+	if err != nil {
+		logging.Fatalf("Could not initialize %sDeepl API%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())
+		os.Exit(1)
+	}
+	logging.Infof("%sAPI Character Usage:%s %d", logging.AnsiBoldOn, logging.AnsiAllDefault, response.CharacterCount)
+	logging.Infof("%sAPI Character Limit:%s %d", logging.AnsiBoldOn, logging.AnsiAllDefault, response.CharacterLimit)
+
 	translatorPdx, err := pdx.CreateTranslator(resolvedConfigFile, resolvedLocalizationDirectory, translatorApi)
 	if err != nil {
 		logging.Fatalf("Could not initialize %sPDX Translator%s: %s", logging.AnsiBoldOn, logging.AnsiAllDefault, err.Error())
