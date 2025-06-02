@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -73,14 +74,10 @@ func (api Api) Usage() (*UsageResponse, error) {
 		return nil, err
 	}
 
-	if response.StatusCode == 403 {
+	err = convertApiError(response.StatusCode)
+	if err != nil {
 		logging.Tracef("Deepl Response: %s", string(body))
-		return nil, errors.New("invalid token")
-	}
-
-	if response.StatusCode != 200 {
-		logging.Tracef("Deepl Response: %s", string(body))
-		return nil, errors.New(response.Status)
+		return nil, err
 	}
 
 	var apiResponse UsageResponse
@@ -149,14 +146,10 @@ func (api Api) Translate(
 		return nil, err
 	}
 
-	if response.StatusCode == 403 {
+	err = convertApiError(response.StatusCode)
+	if err != nil {
 		logging.Tracef("Deepl Response: %s", string(body))
-		return nil, errors.New("invalid token")
-	}
-
-	if response.StatusCode != 200 {
-		logging.Tracef("Deepl Response: %s", string(body))
-		return nil, errors.New(response.Status)
+		return nil, err
 	}
 
 	var apiResponse TranslationResponse
@@ -171,4 +164,29 @@ func (api Api) Translate(
 	}
 
 	return &apiResponse, nil
+}
+
+// API errors are documented here:
+// https://developers.deepl.com/docs/best-practices/error-handling
+// https://support.deepl.com/hc/en-us/articles/9773964275868-DeepL-API-error-messages
+func convertApiError(statusCode int) error {
+	switch statusCode {
+	case 200:
+		return nil
+	case 400:
+		return errors.New("bad request (please report this issue)")
+	case 403:
+		return errors.New("invalid token")
+	case 404:
+		return errors.New("the requested resource could not be found (please report this issue)")
+	case 413:
+		return errors.New("the request size exceeds the limit (what are you doing?)")
+	case 429:
+		return errors.New("too many requests (restart the tool to translate skipped keys)")
+	case 456:
+		logging.Fatal("quota exceeded")
+		return nil
+	default:
+		return fmt.Errorf("%d: internal deepl api error", statusCode)
+	}
 }
