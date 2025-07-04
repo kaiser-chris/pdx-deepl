@@ -15,15 +15,18 @@ import (
 
 const skippedHash = "skipped"
 const skippedChecksum = 1
+const replaceDirectory = "replace"
 
 var regexLocalization = regexp.MustCompile(`^\s*(?P<locKey>.+):\d*\s*"(?P<loc>.*)"\s*(?P<hash>#deepl:.*)?(?:#.*)?$`)
 var crc32q = crc32.MakeTable(0xD5828281)
 
 type LocalizationLanguage struct {
-	Name      string
-	Locale    string
-	Directory string
-	Files     map[string]*LocalizationFile
+	Name                  string
+	Locale                string
+	Directory             string
+	DirectoryReplace      string
+	LocalizationDirectory string
+	Files                 map[string]*LocalizationFile
 }
 
 type LocalizationFile struct {
@@ -115,9 +118,19 @@ func (file *LocalizationFile) WriteFile(
 
 func readLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
 	languageDirectory := filepath.Join(localizationDirectory, name)
+	languageReplaceDirectory := filepath.Join(localizationDirectory, replaceDirectory, name)
 
+	// Check for at least one directory of the base game existing
+	foundBaseDirectory := true
 	if _, err := os.Stat(languageDirectory); os.IsNotExist(err) {
-		return nil, fmt.Errorf("language directory could not be found: %s", languageDirectory)
+		foundBaseDirectory = false
+	}
+	foundReplaceDirectory := true
+	if _, err := os.Stat(languageDirectory); os.IsNotExist(err) {
+		foundReplaceDirectory = false
+	}
+	if !foundBaseDirectory && !foundReplaceDirectory {
+		return nil, fmt.Errorf("language directory or language replace directory could not be found: %s, %s", languageDirectory, languageReplaceDirectory)
 	}
 
 	locale, ok := Languages[name]
@@ -126,37 +139,68 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 	}
 
 	language := LocalizationLanguage{
-		Name:      name,
-		Directory: languageDirectory,
-		Locale:    locale,
-		Files:     make(map[string]*LocalizationFile),
+		Name:                  name,
+		Directory:             languageDirectory,
+		DirectoryReplace:      languageReplaceDirectory,
+		LocalizationDirectory: localizationDirectory,
+		Locale:                locale,
+		Files:                 make(map[string]*LocalizationFile),
 	}
 
-	err := filepath.WalkDir(languageDirectory, func(path string, info os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-		localization, err := readLocalizationFile(path, &language)
-		if err != nil {
-			return err
-		}
-		if localization != nil {
-			tag := fmt.Sprintf("l_%s.yml", language.Name)
-			key, found := strings.CutSuffix(localization.FileName, tag)
-			if !found {
-				return fmt.Errorf("language tag (%s) in filename could not be found: %s", tag, localization.FileName)
+	if foundBaseDirectory {
+		err := filepath.WalkDir(languageDirectory, func(path string, info os.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
-			localization.Key = key
-			language.Files[key] = localization
+			if info.IsDir() {
+				return nil
+			}
+			localization, err := readLocalizationFile(path, &language)
+			if err != nil {
+				return err
+			}
+			if localization != nil {
+				tag := fmt.Sprintf("l_%s.yml", language.Name)
+				key, found := strings.CutSuffix(localization.FileName, tag)
+				if !found {
+					return fmt.Errorf("language tag (%s) in filename could not be found: %s", tag, localization.FileName)
+				}
+				localization.Key = key
+				language.Files[key] = localization
+			}
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
 		}
-		return nil
-	})
+	}
 
-	if err != nil {
-		log.Fatal(err)
+	if foundReplaceDirectory {
+		err := filepath.WalkDir(languageReplaceDirectory, func(path string, info os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			localization, err := readLocalizationFile(path, &language)
+			if err != nil {
+				return err
+			}
+			if localization != nil {
+				tag := fmt.Sprintf("l_%s.yml", language.Name)
+				key, found := strings.CutSuffix(localization.FileName, tag)
+				if !found {
+					return fmt.Errorf("language tag (%s) in filename could not be found: %s", tag, localization.FileName)
+				}
+				localization.Key = key
+				language.Files[key] = localization
+			}
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	return &language, nil
@@ -168,7 +212,14 @@ func readLocalizationFile(file string, language *LocalizationLanguage) (*Localiz
 		return nil, err
 	}
 
-	filename := file[len(language.Directory)+1:]
+	defer func(reader *os.File) {
+		err := reader.Close()
+		if err != nil {
+			logging.Fatalf("Could not close file (%s) reader: %v", file, err)
+		}
+	}(reader)
+
+	filename := file[len(language.LocalizationDirectory)+1:]
 
 	localizationFile := &LocalizationFile{
 		FileName:      filename,

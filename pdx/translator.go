@@ -14,10 +14,10 @@ import (
 
 const ignoreTagStart = "<ignore>"
 const ignoreTagEnd = "</ignore>"
-const referenceTagStart = "<ref>"
-const referenceTagEnd = "</ref>"
 
 var regexFormatting = regexp.MustCompile(`#[a-zA-Z]+\s`)
+var regexTexticon = regexp.MustCompile(`@[a-zA-Z_\-]+!`)
+var regexLink = regexp.MustCompile(`\$[a-zA-Z_\-]+\$`)
 
 type ParadoxTranslator struct {
 	Config                *TranslationConfiguration
@@ -74,13 +74,26 @@ func (translator *ParadoxTranslator) Translate() error {
 }
 
 func (translator *ParadoxTranslator) readTargetLanguage(language string) (*LocalizationLanguage, error) {
-	languagePath := filepath.Join(translator.LocalizationDirectory, language)
-	if _, err := os.Stat(languagePath); os.IsNotExist(err) {
-		err := os.MkdirAll(languagePath, 0755)
-		if err != nil {
-			return nil, err
+	if _, err := os.Stat(translator.BaseLanguage.Directory); err == nil {
+		languagePath := filepath.Join(translator.LocalizationDirectory, language)
+		if _, err := os.Stat(languagePath); os.IsNotExist(err) {
+			err := os.MkdirAll(languagePath, 0755)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+
+	if _, err := os.Stat(translator.BaseLanguage.DirectoryReplace); err == nil {
+		languagePath := filepath.Join(translator.LocalizationDirectory, replaceDirectory, language)
+		if _, err := os.Stat(languagePath); os.IsNotExist(err) {
+			err := os.MkdirAll(languagePath, 0755)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	targetLanguage, err := readLanguage(translator.LocalizationDirectory, language)
 	if err != nil {
 		return nil, err
@@ -91,7 +104,8 @@ func (translator *ParadoxTranslator) readTargetLanguage(language string) (*Local
 
 func (translator *ParadoxTranslator) translateTargetLanguage(targetLanguage *LocalizationLanguage, glossary string) (*LocalizationLanguage, error) {
 	for key, file := range translator.BaseLanguage.Files {
-		translatedFile, err := translator.translateTargetFile(file, targetLanguage.Files[key], targetLanguage, glossary)
+		targetKey := strings.Replace(key, translator.BaseLanguage.Name, targetLanguage.Name, 1)
+		translatedFile, err := translator.translateTargetFile(file, targetLanguage.Files[targetKey], targetLanguage, glossary)
 		if err != nil {
 			return nil, err
 		}
@@ -117,16 +131,18 @@ func (translator *ParadoxTranslator) translateTargetFile(
 
 	var file *LocalizationFile
 	if targetFile == nil {
+		targetKey := strings.Replace(baseFile.Key, translator.BaseLanguage.Name, targetLanguage.Name, 1)
+		targetFileName := strings.Replace(baseFile.FileName, translator.BaseLanguage.Name, targetLanguage.Name, 1)
 		baseTag := fmt.Sprintf("l_%s.yml", translator.BaseLanguage.Name)
 		targetTag := fmt.Sprintf("l_%s.yml", targetLanguage.Name)
 		name := strings.ReplaceAll(
-			baseFile.FileName,
+			targetFileName,
 			baseTag,
 			targetTag,
 		)
-		path := filepath.Join(translator.LocalizationDirectory, targetLanguage.Name, name)
+		path := filepath.Join(translator.LocalizationDirectory, name)
 		file = &LocalizationFile{
-			Key:           baseFile.Key,
+			Key:           targetKey,
 			Path:          path,
 			FileName:      name,
 			Localizations: make(map[string]*Localization),
@@ -241,24 +257,31 @@ func escape(content string) string {
 	requestContent = strings.ReplaceAll(requestContent, "]", "]"+ignoreTagEnd)
 
 	// Escape loc references
-	for strings.Contains(requestContent, "$") {
-		requestContent = strings.Replace(requestContent, "$", referenceTagStart, 1)
-		requestContent = strings.Replace(requestContent, "$", referenceTagEnd, 1)
-	}
+	requestContent = regexLink.ReplaceAllStringFunc(requestContent, func(match string) string {
+		return ignoreTagStart + match + ignoreTagEnd
+	})
+
+	// Escape text icons
+	requestContent = regexTexticon.ReplaceAllStringFunc(requestContent, func(match string) string {
+		return ignoreTagStart + match + ignoreTagEnd
+	})
+
+	// Escape line breaks and tabs
+	requestContent = strings.ReplaceAll(requestContent, "\\n", ignoreTagStart+"\\n"+ignoreTagEnd)
+	requestContent = strings.ReplaceAll(requestContent, "\\t", ignoreTagStart+"\\t"+ignoreTagEnd)
 
 	// Escape formatting
 	requestContent = strings.ReplaceAll(requestContent, "#!", ignoreTagStart+"#!"+ignoreTagEnd)
-	for _, formatting := range regexFormatting.FindAllString(requestContent, -1) {
-		requestContent = strings.ReplaceAll(requestContent, formatting, ignoreTagStart+formatting+ignoreTagEnd)
-	}
+	requestContent = regexFormatting.ReplaceAllStringFunc(requestContent, func(match string) string {
+		return ignoreTagStart + match + ignoreTagEnd
+	})
+
 	return requestContent
 }
 
 func normalize(content string) string {
 	result := strings.ReplaceAll(content, ignoreTagStart, "")
 	result = strings.ReplaceAll(result, ignoreTagEnd, "")
-	result = strings.ReplaceAll(result, referenceTagStart, "$")
-	result = strings.ReplaceAll(result, referenceTagEnd, "$")
 	return result
 }
 

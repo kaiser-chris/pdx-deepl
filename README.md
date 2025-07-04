@@ -14,6 +14,7 @@
 * [Statistics](#statistics)
 * [Getting DeepL API access](#getting-deepl-api-access)
 * [Usage](#usage)
+  * [Usage Tip](#usage-tip)
 * [Issues with free DeepL API](#issues-with-free-deepl-api)
 * [How To Build](#how-to-build)
 
@@ -67,10 +68,17 @@ The following formats are currently escaped:
   - Example: `Country [Country.GetName]`
   - Functions like these are escaped
   - Anything inside of `[]` is not translated
+#### Text Icons
+  - Example: `@innovation! Innovation`
+  - Text Icons like these are escaped
+  - Anything inside of `@!` without spaces is not translated
 #### References
   - Example: `some $another_loc_key$ text`
-  - Referenced like these are escaped
+  - References like these are escaped
   - Anything inside two `$` is not translated
+#### Line Breaks and Tabs
+- Example: `\tCountry\nNext Country`
+- Line Breaks and Tabs like these are not translated
 
 ## Configuration
 pdx-deepl translation needs to be configured with a [translation-config.json](translation-config.json).
@@ -117,7 +125,7 @@ You are able to ignore localization files by adding them to the ignore list.
 
 pdx-deepl will fully ignore files that are in this list and won't try to translate them.
 
-The ignore list contains relative (from the language root) paths of files that should not be translated:
+The ignore list contains relative (from the localization root) paths of files that should not be translated:
 ```json
 {
   "base-language": "english",
@@ -127,8 +135,8 @@ The ignore list contains relative (from the language root) paths of files that s
     }
   ],
   "ignore-files": [
-    "your_loc_file_l_english.yml",
-    "sub_directory/your_other_loc_file_l_english.yml"
+    "english/your_loc_file_l_english.yml",
+    "english/sub_directory/your_other_loc_file_l_english.yml"
   ]
 }
 ```
@@ -173,6 +181,8 @@ Then you can run the application like this:
 .\pdx-deepl.exe --localization="X:\path\to\localization\directory" --api-token="your token"
 ```
 
+> **NOTE:** This path is specifically to the **localization** folder in your mod
+
 All start commands can be found in the help dialog. Help dialog (`.\pdx-deepl.exe -h`):
 ```
 Usage of pdx-deepl:
@@ -187,6 +197,16 @@ Usage of pdx-deepl:
   -stats
         Optional: When set produces relevant statistics about the localization like the character count
 ```
+
+### Usage Tip
+If you do not know how to open the command line on Windows:
+- Open the folder containing the `pdx-deepl.exe`
+- Click into the top address bar of the explorer
+- Clear it
+- Write `cmd` and press enter
+- Now you should have a command line window open
+
+![explorer_example.png](explorer_example.png)
 
 ## Issues with free DeepL API
 The current version has issues when it is used with the **free** DeepL API:
