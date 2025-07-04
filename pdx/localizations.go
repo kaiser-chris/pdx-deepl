@@ -125,8 +125,9 @@ func readLanguage(localizationDirectory string, name string) (*LocalizationLangu
 	if _, err := os.Stat(languageDirectory); os.IsNotExist(err) {
 		foundBaseDirectory = false
 	}
+
 	foundReplaceDirectory := true
-	if _, err := os.Stat(languageDirectory); os.IsNotExist(err) {
+	if _, err := os.Stat(languageReplaceDirectory); os.IsNotExist(err) {
 		foundReplaceDirectory = false
 	}
 	if !foundBaseDirectory && !foundReplaceDirectory {
