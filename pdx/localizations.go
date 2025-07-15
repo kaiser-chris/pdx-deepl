@@ -7,6 +7,7 @@ import (
 	"hash/crc32"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -23,8 +24,7 @@ var crc32q = crc32.MakeTable(0xD5828281)
 type LocalizationLanguage struct {
 	Name                  string
 	Locale                string
-	Directory             string
-	DirectoryReplace      string
+	Tag                   string
 	LocalizationDirectory string
 	Files                 map[string]*LocalizationFile
 }
@@ -117,91 +117,49 @@ func (file *LocalizationFile) WriteFile(
 }
 
 func readLanguage(localizationDirectory string, name string) (*LocalizationLanguage, error) {
-	languageDirectory := filepath.Join(localizationDirectory, name)
-	languageReplaceDirectory := filepath.Join(localizationDirectory, replaceDirectory, name)
-
-	// Check for at least one directory of the base game existing
-	foundBaseDirectory := true
-	if _, err := os.Stat(languageDirectory); os.IsNotExist(err) {
-		foundBaseDirectory = false
-	}
-
-	foundReplaceDirectory := true
-	if _, err := os.Stat(languageReplaceDirectory); os.IsNotExist(err) {
-		foundReplaceDirectory = false
-	}
-	if !foundBaseDirectory && !foundReplaceDirectory {
-		return nil, fmt.Errorf("language directory or language replace directory could not be found: %s, %s", languageDirectory, languageReplaceDirectory)
-	}
-
 	locale, ok := Languages[name]
 	if !ok {
 		return nil, fmt.Errorf("language locale not supported: %s", name)
 	}
 
+	languageTag := "l_" + name
+
 	language := LocalizationLanguage{
 		Name:                  name,
-		Directory:             languageDirectory,
-		DirectoryReplace:      languageReplaceDirectory,
+		Tag:                   languageTag,
 		LocalizationDirectory: localizationDirectory,
 		Locale:                locale,
 		Files:                 make(map[string]*LocalizationFile),
 	}
 
-	if foundBaseDirectory {
-		err := filepath.WalkDir(languageDirectory, func(path string, info os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-			localization, err := readLocalizationFile(path, &language)
-			if err != nil {
-				return err
-			}
-			if localization != nil {
-				tag := fmt.Sprintf("l_%s.yml", language.Name)
-				key, found := strings.CutSuffix(localization.FileName, tag)
-				if !found {
-					return fmt.Errorf("language tag (%s) in filename could not be found: %s", tag, localization.FileName)
-				}
-				localization.Key = key
-				language.Files[key] = localization
-			}
-			return nil
-		})
+	err := filepath.WalkDir(localizationDirectory, func(filepath string, info os.DirEntry, err error) error {
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-	}
-
-	if foundReplaceDirectory {
-		err := filepath.WalkDir(languageReplaceDirectory, func(path string, info os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-			localization, err := readLocalizationFile(path, &language)
-			if err != nil {
-				return err
-			}
-			if localization != nil {
-				tag := fmt.Sprintf("l_%s.yml", language.Name)
-				key, found := strings.CutSuffix(localization.FileName, tag)
-				if !found {
-					return fmt.Errorf("language tag (%s) in filename could not be found: %s", tag, localization.FileName)
-				}
-				localization.Key = key
-				language.Files[key] = localization
-			}
+		if info.IsDir() {
 			return nil
-		})
-		if err != nil {
-			log.Fatal(err)
 		}
+		filename := path.Base(filepath)
+		if !strings.Contains(filename, languageTag) {
+			return nil
+		}
+		localization, err := readLocalizationFile(filepath, &language)
+		if err != nil {
+			return err
+		}
+		if localization != nil {
+			tag := fmt.Sprintf("l_%s.yml", language.Name)
+			key, found := strings.CutSuffix(localization.FileName, tag)
+			if !found {
+				return fmt.Errorf("language tag (%s) in filename could not be found: %s", tag, localization.FileName)
+			}
+			localization.Key = key
+			language.Files[key] = localization
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	return &language, nil

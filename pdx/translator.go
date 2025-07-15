@@ -4,7 +4,6 @@ import (
 	"bahmut.de/pdx-deepl/deepl"
 	"bahmut.de/pdx-deepl/logging"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -74,26 +73,6 @@ func (translator *ParadoxTranslator) Translate() error {
 }
 
 func (translator *ParadoxTranslator) readTargetLanguage(language string) (*LocalizationLanguage, error) {
-	if _, err := os.Stat(translator.BaseLanguage.Directory); err == nil {
-		languagePath := filepath.Join(translator.LocalizationDirectory, language)
-		if _, err := os.Stat(languagePath); os.IsNotExist(err) {
-			err := os.MkdirAll(languagePath, 0755)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	if _, err := os.Stat(translator.BaseLanguage.DirectoryReplace); err == nil {
-		languagePath := filepath.Join(translator.LocalizationDirectory, replaceDirectory, language)
-		if _, err := os.Stat(languagePath); os.IsNotExist(err) {
-			err := os.MkdirAll(languagePath, 0755)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
 	targetLanguage, err := readLanguage(translator.LocalizationDirectory, language)
 	if err != nil {
 		return nil, err
