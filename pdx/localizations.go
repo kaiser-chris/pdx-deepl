@@ -19,6 +19,7 @@ const skippedChecksum = 1
 const replaceDirectory = "replace"
 
 var regexLocalization = regexp.MustCompile(`^\s*(?P<locKey>.+):\d*\s*"(?P<loc>.*)"\s*(?P<hash>#deepl:.*)?(?:#.*)?$`)
+var regexRemoveComment = regexp.MustCompile(`(?m)[\r\n]+^[[:blank:]]*#!.*$`)
 var crc32q = crc32.MakeTable(0xD5828281)
 
 type LocalizationLanguage struct {
@@ -112,6 +113,9 @@ func (file *LocalizationFile) WriteFile(
 			break
 		}
 	}
+
+	// remove marked comments
+	targetContent = regexRemoveComment.ReplaceAllString(targetContent, "")
 
 	return os.WriteFile(file.Path, []byte(targetContent), 0644)
 }

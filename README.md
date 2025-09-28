@@ -8,6 +8,8 @@
 * [Manual and Machine translation](#manual-and-machine-translation)
 * [Supported Games](#supported-games)
     * [Special Cases](#special-cases)
+* [Comments](#comments)
+    * [Example](#example) 
 * [Configuration](#configuration)
     * [Glossaries](#glossaries)
     * [Ignore Files](#ignoring-files)
@@ -54,6 +56,25 @@ then preserved in further handling.
 - Victoria 3
 - Crusader Kings 3
 - Others may work but are untested
+
+## Comments
+Comments on lines without localizations are preserved in the translated file.
+
+If this is something you want to avoid then use `#!` to comment a line, and it will be removed in the translated file.
+### Example
+This base file:
+```yaml
+l_english:
+ #! removed comment
+ # preserved comment
+ some_loc: "some loc content"
+```
+will become:
+```yaml
+l_german:
+ # preserved comment
+ some_loc: "some loc content"
+```
 
 ### Special Cases
 The translator automatically escapes localization tags.
