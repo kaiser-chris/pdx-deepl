@@ -1,14 +1,15 @@
 package pdx
 
 import (
-	"bahmut.de/pdx-deepl/deepl"
-	"bahmut.de/pdx-deepl/logging"
 	"fmt"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
+
+	"bahmut.de/pdx-deepl/deepl"
+	"bahmut.de/pdx-deepl/logging"
 )
 
 const ignoreTagStart = "<ignore>"
@@ -16,7 +17,7 @@ const ignoreTagEnd = "</ignore>"
 
 var regexFormatting = regexp.MustCompile(`#[a-zA-Z;]+\s`)
 var regexTexticon = regexp.MustCompile(`@[a-zA-Z_\-]+!`)
-var regexLink = regexp.MustCompile(`\$[a-zA-Z_\-]+\$`)
+var regexLink = regexp.MustCompile(`\$[a-zA-Z0-9_\-|=+:;%*]+\$`)
 
 type ParadoxTranslator struct {
 	Config                *TranslationConfiguration
